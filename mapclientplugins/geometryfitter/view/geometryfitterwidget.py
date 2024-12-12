@@ -1033,20 +1033,22 @@ class GeometryFitterWidget(QtWidgets.QWidget):
 
         is_align_groups = align.isAlignGroups()
         is_align_markers = align.isAlignMarkers()
-        can_align_groups = align.canAlignGroups()
-        can_align_markers = align.canAlignMarkers()
-        can_auto_align = align.canAutoAlign()
+        align_group_count = align.matchingGroupCount()
+        align_marker_count = align.matchingMarkerCount()
+        can_align_groups = align_group_count > 2
+        can_align_markers = align_marker_count > 2
+        can_auto_align = (align_group_count + align_marker_count) > 2
 
         self._ui.align_widget.alignGroups_checkBox.setEnabled(can_align_groups)
         self._ui.align_widget.alignMarkers_checkBox.setEnabled(can_align_markers)
 
-        if can_align_groups and is_align_groups and not can_align_markers:
+        if can_align_groups and is_align_groups and align_marker_count > 0:
             self._ui.align_widget.alignMarkers_checkBox.setEnabled(True)
         elif can_align_groups and not is_align_groups and not can_align_markers:
             self._ui.align_widget.alignMarkers_checkBox.setChecked(False)
             align.setAlignMarkers(False)
 
-        if can_align_markers and is_align_markers and not can_align_groups:
+        if can_align_markers and is_align_markers and align_group_count > 0:
             self._ui.align_widget.alignGroups_checkBox.setEnabled(True)
         elif can_align_markers and not is_align_markers and not can_align_groups:
             self._ui.align_widget.alignGroups_checkBox.setChecked(False)
