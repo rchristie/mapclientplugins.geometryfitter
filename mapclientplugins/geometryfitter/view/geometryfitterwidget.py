@@ -984,6 +984,11 @@ class GeometryFitterWidget(QtWidgets.QWidget):
 
         align = self._getAlign()
 
+        matched_markers = align.matchingMarkerCount()
+        self._ui.align_widget.alignMarkers_checkBox.setText(f"({matched_markers} matched marker{'' if matched_markers == 1 else 's'}.)")
+        matched_groups = align.matchingGroupCount()
+        self._ui.align_widget.alignGroups_checkBox.setText(f"({matched_groups} matched group{'' if matched_groups == 1 else 's'}.)")
+
         self._ui.align_widget.alignGroups_checkBox.setCheckState(QtCore.Qt.CheckState.Checked if align.isAlignGroups() else QtCore.Qt.CheckState.Unchecked)
         self._ui.align_widget.alignMarkers_checkBox.setCheckState(QtCore.Qt.CheckState.Checked if align.isAlignMarkers() else QtCore.Qt.CheckState.Unchecked)
 
