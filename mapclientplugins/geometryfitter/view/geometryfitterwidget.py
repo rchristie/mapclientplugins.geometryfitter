@@ -1026,6 +1026,8 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         align = self._getAlign()
         self._align_model_handler.set_enabled(align.isAlignManually())
 
+        is_align_groups = align.isAlignGroups()
+        is_align_markers = align.isAlignMarkers()
         can_align_groups = align.canAlignGroups()
         can_align_markers = align.canAlignMarkers()
         can_auto_align = align.canAutoAlign()
@@ -1033,15 +1035,15 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         self._ui.align_widget.alignGroups_checkBox.setEnabled(can_align_groups)
         self._ui.align_widget.alignMarkers_checkBox.setEnabled(can_align_markers)
 
-        if can_align_groups and align.isAlignGroups() and not can_align_markers:
+        if can_align_groups and is_align_groups and not can_align_markers:
             self._ui.align_widget.alignMarkers_checkBox.setEnabled(True)
-        elif can_align_groups and not align.isAlignGroups() and not can_align_markers:
+        elif can_align_groups and not is_align_groups and not can_align_markers:
             self._ui.align_widget.alignMarkers_checkBox.setChecked(False)
             align.setAlignMarkers(False)
 
-        if can_align_markers and align.isAlignMarkers() and not can_align_groups:
+        if can_align_markers and is_align_markers and not can_align_groups:
             self._ui.align_widget.alignGroups_checkBox.setEnabled(True)
-        elif can_align_markers and not align.isAlignMarkers() and not can_align_groups:
+        elif can_align_markers and not is_align_markers and not can_align_groups:
             self._ui.align_widget.alignGroups_checkBox.setChecked(False)
             align.setAlignGroups(False)
 
@@ -1051,7 +1053,7 @@ class GeometryFitterWidget(QtWidgets.QWidget):
             self._ui.align_widget.alignMarkers_checkBox.setChecked(True)
             align.setAlignMarkers(True)
 
-        self._ui.align_widget.alignScaleProportion_lineEdit.setEnabled(align.isAlignMarkers() or align.isAlignGroups())
+        self._ui.align_widget.alignScaleProportion_lineEdit.setEnabled(is_align_markers or is_align_groups)
 
     def _alignRotationEntered(self):
         values = QLineEdit_parseVector3(self._ui.align_widget.alignRotationManual_lineEdit)
