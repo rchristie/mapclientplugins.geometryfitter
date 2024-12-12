@@ -983,7 +983,6 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         default_auto_text = "[pending]"
 
         align = self._getAlign()
-        print("Is align manual?", align.isAlignManually())
 
         self._ui.align_widget.alignGroups_checkBox.setCheckState(QtCore.Qt.CheckState.Checked if align.isAlignGroups() else QtCore.Qt.CheckState.Unchecked)
         self._ui.align_widget.alignMarkers_checkBox.setCheckState(QtCore.Qt.CheckState.Checked if align.isAlignMarkers() else QtCore.Qt.CheckState.Unchecked)
@@ -1025,13 +1024,34 @@ class GeometryFitterWidget(QtWidgets.QWidget):
 
     def _update_alignment_widgets(self):
         align = self._getAlign()
-        isAlignGroups = self._ui.align_widget.alignGroups_checkBox.checkState() == QtCore.Qt.CheckState.Checked
-        isAlignMarkers = self._ui.align_widget.alignMarkers_checkBox.checkState() == QtCore.Qt.CheckState.Checked
-
         self._align_model_handler.set_enabled(align.isAlignManually())
-        self._ui.align_widget.alignGroups_checkBox.setEnabled(align.canAlignGroups())
-        self._ui.align_widget.alignMarkers_checkBox.setEnabled(align.canAlignMarkers())
-        self._ui.align_widget.alignScaleProportion_lineEdit.setEnabled(isAlignMarkers or isAlignGroups)
+
+        can_align_groups = align.canAlignGroups()
+        can_align_markers = align.canAlignMarkers()
+        can_auto_align = align.canAutoAlign()
+
+        self._ui.align_widget.alignGroups_checkBox.setEnabled(can_align_groups)
+        self._ui.align_widget.alignMarkers_checkBox.setEnabled(can_align_markers)
+
+        if can_align_groups and align.isAlignGroups() and not can_align_markers:
+            self._ui.align_widget.alignMarkers_checkBox.setEnabled(True)
+        elif can_align_groups and not align.isAlignGroups() and not can_align_markers:
+            self._ui.align_widget.alignMarkers_checkBox.setChecked(False)
+            align.setAlignMarkers(False)
+
+        if can_align_markers and align.isAlignMarkers() and not can_align_groups:
+            self._ui.align_widget.alignGroups_checkBox.setEnabled(True)
+        elif can_align_markers and not align.isAlignMarkers() and not can_align_groups:
+            self._ui.align_widget.alignGroups_checkBox.setChecked(False)
+            align.setAlignGroups(False)
+
+        if can_auto_align and not can_align_markers and not can_align_groups:
+            self._ui.align_widget.alignGroups_checkBox.setChecked(True)
+            align.setAlignGroups(True)
+            self._ui.align_widget.alignMarkers_checkBox.setChecked(True)
+            align.setAlignMarkers(True)
+
+        self._ui.align_widget.alignScaleProportion_lineEdit.setEnabled(align.isAlignMarkers() or align.isAlignGroups())
 
     def _alignRotationEntered(self):
         values = QLineEdit_parseVector3(self._ui.align_widget.alignRotationManual_lineEdit)
