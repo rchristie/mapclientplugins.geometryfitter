@@ -325,7 +325,7 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         if step is not self._fitter.getInitialFitterStepConfig():
             item.setCheckState(QtCore.Qt.CheckState.Checked if step.hasRun() else QtCore.Qt.CheckState.Unchecked)
             if isinstance(step, FitterStepAlign):
-                self._updateAlignWidgets()
+                self._updateAlignWidgets(align=step)
         if step == self._currentFitterStep:
             self._ui.steps_listWidget.setCurrentItem(item)
 
@@ -975,14 +975,15 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         self._ui.align_widget.alignScaleManual_lineEdit.setText(scale_string)
         self._ui.align_widget.alignTranslationManual_lineEdit.setText(translation_string)
 
-    def _updateAlignWidgets(self):
+    def _updateAlignWidgets(self, align=None):
         """
         Update align widgets to display parameters from current align step.
         """
         realFormat = "{:.4g}"
         default_auto_text = "[pending]"
 
-        align = self._getAlign()
+        if align is None:
+            align = self._getAlign()
 
         matched_markers = align.matchingMarkerCount()
         self._ui.align_widget.alignMarkers_checkBox.setText(f"({matched_markers} matched marker{'' if matched_markers == 1 else 's'}.)")
@@ -1006,7 +1007,7 @@ class GeometryFitterWidget(QtWidgets.QWidget):
             translation_string if align.isAlignManually() else "0, 0, 0"
         )
 
-        self._update_alignment_widgets()
+        self._update_alignment_widgets(align)
 
     @set_wait_cursor
     def _run_fitter(self, fit_step, stem=None, reorder=False):
@@ -1019,16 +1020,17 @@ class GeometryFitterWidget(QtWidgets.QWidget):
 
     def _alignGroupsClicked(self):
         state = self._ui.align_widget.alignGroups_checkBox.checkState()
-        self._getAlign().setAlignGroups(state == QtCore.Qt.CheckState.Checked)
-        self._update_alignment_widgets()
+        align = self._getAlign()
+        align.setAlignGroups(state == QtCore.Qt.CheckState.Checked)
+        self._update_alignment_widgets(align)
 
     def _alignMarkersClicked(self):
         state = self._ui.align_widget.alignMarkers_checkBox.checkState()
-        self._getAlign().setAlignMarkers(state == QtCore.Qt.CheckState.Checked)
-        self._update_alignment_widgets()
-
-    def _update_alignment_widgets(self):
         align = self._getAlign()
+        align.setAlignMarkers(state == QtCore.Qt.CheckState.Checked)
+        self._update_alignment_widgets(align)
+
+    def _update_alignment_widgets(self, align):
         self._align_model_handler.set_enabled(align.isAlignManually())
 
         is_align_groups = align.isAlignGroups()
