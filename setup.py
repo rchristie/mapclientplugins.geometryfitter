@@ -41,7 +41,7 @@ requires = [
     "cmlibs.utils >= 0.6",
     "cmlibs.widgets >= 0.4",
     "cmlibs.zinc >= 4.0",
-    "scaffoldfitter >= 0.9",
+    "scaffoldfitter >= 0.10",
     "PySide6"
 ]
 source_license = readfile("LICENSE")

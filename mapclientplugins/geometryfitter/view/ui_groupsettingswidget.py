@@ -80,56 +80,66 @@ class Ui_GroupSettingsWidget(object):
         self.groupFitDataWeight_checkBox.setObjectName(u"groupFitDataWeight_checkBox")
         self.groupFitDataWeight_checkBox.setTristate(True)
 
-        self.groupSettings_Layout.setWidget(4, QFormLayout.LabelRole, self.groupFitDataWeight_checkBox)
+        self.groupSettings_Layout.setWidget(5, QFormLayout.LabelRole, self.groupFitDataWeight_checkBox)
 
         self.groupFitDataWeight_lineEdit = QLineEdit(self.groupSettings_groupBox)
         self.groupFitDataWeight_lineEdit.setObjectName(u"groupFitDataWeight_lineEdit")
 
-        self.groupSettings_Layout.setWidget(4, QFormLayout.FieldRole, self.groupFitDataWeight_lineEdit)
+        self.groupSettings_Layout.setWidget(5, QFormLayout.FieldRole, self.groupFitDataWeight_lineEdit)
 
         self.groupFitStrainPenalty_checkBox = QCheckBox(self.groupSettings_groupBox)
         self.groupFitStrainPenalty_checkBox.setObjectName(u"groupFitStrainPenalty_checkBox")
         self.groupFitStrainPenalty_checkBox.setTristate(True)
 
-        self.groupSettings_Layout.setWidget(7, QFormLayout.LabelRole, self.groupFitStrainPenalty_checkBox)
+        self.groupSettings_Layout.setWidget(8, QFormLayout.LabelRole, self.groupFitStrainPenalty_checkBox)
 
         self.groupFitStrainPenalty_lineEdit = QLineEdit(self.groupSettings_groupBox)
         self.groupFitStrainPenalty_lineEdit.setObjectName(u"groupFitStrainPenalty_lineEdit")
 
-        self.groupSettings_Layout.setWidget(7, QFormLayout.FieldRole, self.groupFitStrainPenalty_lineEdit)
+        self.groupSettings_Layout.setWidget(8, QFormLayout.FieldRole, self.groupFitStrainPenalty_lineEdit)
 
         self.groupFitCurvaturePenalty_checkBox = QCheckBox(self.groupSettings_groupBox)
         self.groupFitCurvaturePenalty_checkBox.setObjectName(u"groupFitCurvaturePenalty_checkBox")
         self.groupFitCurvaturePenalty_checkBox.setTristate(True)
 
-        self.groupSettings_Layout.setWidget(8, QFormLayout.LabelRole, self.groupFitCurvaturePenalty_checkBox)
+        self.groupSettings_Layout.setWidget(9, QFormLayout.LabelRole, self.groupFitCurvaturePenalty_checkBox)
 
         self.groupFitCurvaturePenalty_lineEdit = QLineEdit(self.groupSettings_groupBox)
         self.groupFitCurvaturePenalty_lineEdit.setObjectName(u"groupFitCurvaturePenalty_lineEdit")
 
-        self.groupSettings_Layout.setWidget(8, QFormLayout.FieldRole, self.groupFitCurvaturePenalty_lineEdit)
+        self.groupSettings_Layout.setWidget(9, QFormLayout.FieldRole, self.groupFitCurvaturePenalty_lineEdit)
 
         self.groupFitDataSlidingFactor_checkBox = QCheckBox(self.groupSettings_groupBox)
         self.groupFitDataSlidingFactor_checkBox.setObjectName(u"groupFitDataSlidingFactor_checkBox")
         self.groupFitDataSlidingFactor_checkBox.setTristate(True)
 
-        self.groupSettings_Layout.setWidget(5, QFormLayout.LabelRole, self.groupFitDataSlidingFactor_checkBox)
+        self.groupSettings_Layout.setWidget(6, QFormLayout.LabelRole, self.groupFitDataSlidingFactor_checkBox)
 
         self.groupFitDataSlidingFactor_lineEdit = QLineEdit(self.groupSettings_groupBox)
         self.groupFitDataSlidingFactor_lineEdit.setObjectName(u"groupFitDataSlidingFactor_lineEdit")
 
-        self.groupSettings_Layout.setWidget(5, QFormLayout.FieldRole, self.groupFitDataSlidingFactor_lineEdit)
+        self.groupSettings_Layout.setWidget(6, QFormLayout.FieldRole, self.groupFitDataSlidingFactor_lineEdit)
 
         self.groupFitDataStretch_checkBox = QCheckBox(self.groupSettings_groupBox)
         self.groupFitDataStretch_checkBox.setObjectName(u"groupFitDataStretch_checkBox")
         self.groupFitDataStretch_checkBox.setTristate(True)
 
-        self.groupSettings_Layout.setWidget(6, QFormLayout.LabelRole, self.groupFitDataStretch_checkBox)
+        self.groupSettings_Layout.setWidget(7, QFormLayout.LabelRole, self.groupFitDataStretch_checkBox)
 
         self.groupFitDataStretchSet_checkBox = QCheckBox(self.groupSettings_groupBox)
         self.groupFitDataStretchSet_checkBox.setObjectName(u"groupFitDataStretchSet_checkBox")
 
-        self.groupSettings_Layout.setWidget(6, QFormLayout.FieldRole, self.groupFitDataStretchSet_checkBox)
+        self.groupSettings_Layout.setWidget(7, QFormLayout.FieldRole, self.groupFitDataStretchSet_checkBox)
+
+        self.groupConfigOutlierLength_checkBox = QCheckBox(self.groupSettings_groupBox)
+        self.groupConfigOutlierLength_checkBox.setObjectName(u"groupConfigOutlierLength_checkBox")
+
+        self.groupSettings_Layout.setWidget(4, QFormLayout.LabelRole, self.groupConfigOutlierLength_checkBox)
+
+        self.groupConfigOutlierLength_lineEdit = QLineEdit(self.groupSettings_groupBox)
+        self.groupConfigOutlierLength_lineEdit.setObjectName(u"groupConfigOutlierLength_lineEdit")
+
+        self.groupSettings_Layout.setWidget(4, QFormLayout.FieldRole, self.groupConfigOutlierLength_lineEdit)
 
 
         self.horizontalLayout.addWidget(self.groupSettings_groupBox)
@@ -174,5 +184,9 @@ class Ui_GroupSettingsWidget(object):
         self.groupFitDataStretchSet_checkBox.setToolTip(QCoreApplication.translate("GroupSettingsWidget", u"<html><head/><body><p>Default On stretches model to span of data by applying full data weight in projection tangent direction where projections have a non-negligible tangent component.</p><p>Set to Off for groups cut to variable lengths between specimens so feature is oriented but keeps reference length from model.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.groupFitDataStretchSet_checkBox.setText(QCoreApplication.translate("GroupSettingsWidget", u"Set", None))
+        self.groupConfigOutlierLength_checkBox.setText(QCoreApplication.translate("GroupSettingsWidget", u"Outlier length:", None))
+#if QT_CONFIG(tooltip)
+        self.groupConfigOutlierLength_lineEdit.setToolTip(QCoreApplication.translate("GroupSettingsWidget", u"<html><head/><body><p>Value for excluding outlier data points based on projection length:</p><p>&lt; 0.0: Proportion of maximum projection length to exclude e.g. -0.1 removes data points with projections within 10% of maximum.</p><p>0.0: No outlier exclusion applied.</p><p>&gt;0.0: Positive absolute projection length above which data points are excluded.</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
     # retranslateUi
 
