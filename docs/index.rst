@@ -111,7 +111,7 @@ The *Data proportion* from 0.0 (none) to 1.0 (all) reduces the data being projec
 
 The *Outlier length* controls how remaining data points are excluded depending on their projection lengths:
 
-1. Value < 0.0 specifies proportion of maximum projection length to exclude, e.g. -0.1 excludes data points within 10% of the maximum.
+1. Value < 0.0 specifies proportion of maximum projection length to exclude, e.g. -0.1 excludes data points within 10% of the maximum. Values below -1.0 will be capped to -1.0.
 2. Value 0.0 disables outlier filtering and includes all data (subject to other filters).
 3. Value > 0.0 specifies absolute projection length above which data points are excluded.
 
