@@ -8,10 +8,10 @@ from PySide6 import QtCore, QtWidgets
 
 from cmlibs.maths.vectorops import dot, magnitude, mult, normalize, sub
 from cmlibs.utils.zinc.field import field_is_managed_coordinates, field_is_managed_group, \
-    field_is_managed_real_1_to_3_components
+    field_is_managed_real_1_to_3_components, field_is_managed_group_mesh
 from cmlibs.widgets.handlers.modelalignment import ModelAlignment
 from cmlibs.widgets.handlers.scenemanipulation import SceneManipulation
-from cmlibs.widgets.utils import set_wait_cursor
+from cmlibs.widgets.utils import parse_real_non_negative, parse_vector_3, parse_vector, parse_real, set_wait_cursor
 from cmlibs.zinc.field import Field
 
 from scaffoldfitter.fitterstepalign import FitterStepAlign
@@ -21,71 +21,6 @@ from scaffoldfitter.fitterstepfit import FitterStepFit
 from mapclientplugins.geometryfitter.view.ui_geometryfitterwidget import Ui_GeometryFitterWidget
 
 logger = logging.getLogger(__name__)
-
-
-def field_is_managed_group_mesh(field, mesh):
-    """
-    Chooser conditional function limiting to field group with a mesh group for mesh.
-    """
-    if field_is_managed_group(field):
-        meshGroup = field.castGroup().getMeshGroup(mesh)
-        if meshGroup.isValid():
-            return True
-    return False
-
-
-def QLineEdit_parseVector3(lineedit):
-    """
-    Return 3 component real vector as list from comma separated text in QLineEdit widget
-    or None if invalid.
-    """
-    try:
-        text = lineedit.text()
-        values = [float(value) for value in text.split(",")]
-        if len(values) == 3:
-            return values
-    except:
-        pass
-    return None
-
-
-def QLineEdit_parseVectors(lineedit):
-    """
-    Return one or more component real vector as list from comma separated text in QLineEdit widget
-    or None if invalid.
-    """
-    try:
-        text = lineedit.text()
-        values = [float(value) for value in text.split(",")]
-        return values
-    except:
-        pass
-    return None
-
-
-def QLineEdit_parseReal(lineedit, failValue=0.0):
-    """
-    Return real value from line edit text, or failValue if not a float.
-    """
-    try:
-        value = float(lineedit.text())
-        return value
-    except:
-        pass
-    return failValue
-
-
-def QLineEdit_parseRealNonNegative(lineedit, failValue=-1.0):
-    """
-    Return non-negative real value from line edit text, or failValue if negative or invalid.
-    """
-    try:
-        value = float(lineedit.text())
-        if value >= 0.0:
-            return value
-    except:
-        pass
-    return failValue
 
 
 def _documentation_button_clicked():
@@ -735,7 +670,7 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         self._updateGroupConfigDataProportion()
 
     def _groupConfigDataProportionEntered(self):
-        value = QLineEdit_parseRealNonNegative(self._ui.groupSettings_widget.groupConfigDataProportion_lineEdit)
+        value = parse_real_non_negative(self._ui.groupSettings_widget.groupConfigDataProportion_lineEdit)
         groupName = self._getGroupSettingsGroupName()
         self._getConfig().setGroupDataProportion(groupName, value)
         self._updateGroupConfigDataProportion()
@@ -760,7 +695,7 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         self._updateGroupConfigOutlierLength()
 
     def _groupConfigOutlierLengthEntered(self):
-        value = QLineEdit_parseReal(self._ui.groupSettings_widget.groupConfigOutlierLength_lineEdit)
+        value = parse_real(self._ui.groupSettings_widget.groupConfigOutlierLength_lineEdit)
         groupName = self._getGroupSettingsGroupName()
         self._getConfig().setGroupOutlierLength(groupName, value)
         self._updateGroupConfigOutlierLength()
@@ -785,7 +720,7 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         self._updateGroupFitDataWeight()
 
     def _groupFitDataWeightEntered(self):
-        value = QLineEdit_parseRealNonNegative(self._ui.groupSettings_widget.groupFitDataWeight_lineEdit)
+        value = parse_real_non_negative(self._ui.groupSettings_widget.groupFitDataWeight_lineEdit)
         groupName = self._getGroupSettingsGroupName()
         self._getFit().setGroupDataWeight(groupName, value)
         self._updateGroupFitDataWeight()
@@ -810,7 +745,7 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         self._updateGroupFitDataSlidingFactor()
 
     def _groupFitDataSlidingFactorEntered(self):
-        value = QLineEdit_parseRealNonNegative(self._ui.groupSettings_widget.groupFitDataSlidingFactor_lineEdit)
+        value = parse_real_non_negative(self._ui.groupSettings_widget.groupFitDataSlidingFactor_lineEdit)
         groupName = self._getGroupSettingsGroupName()
         self._getFit().setGroupDataSlidingFactor(groupName, value)
         self._updateGroupFitDataSlidingFactor()
@@ -860,7 +795,7 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         self._updateGroupFitStrainPenalty()
 
     def _groupFitStrainPenaltyEntered(self):
-        value = QLineEdit_parseVectors(self._ui.groupSettings_widget.groupFitStrainPenalty_lineEdit)
+        value = parse_vector(self._ui.groupSettings_widget.groupFitStrainPenalty_lineEdit)
         groupName = self._getGroupSettingsGroupName()
         self._getFit().setGroupStrainPenalty(groupName, value)
         self._updateGroupFitStrainPenalty()
@@ -885,7 +820,7 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         self._updateGroupFitCurvaturePenalty()
 
     def _groupFitCurvaturePenaltyEntered(self):
-        value = QLineEdit_parseVectors(self._ui.groupSettings_widget.groupFitCurvaturePenalty_lineEdit)
+        value = parse_vector(self._ui.groupSettings_widget.groupFitCurvaturePenalty_lineEdit)
         groupName = self._getGroupSettingsGroupName()
         self._getFit().setGroupCurvaturePenalty(groupName, value)
         self._updateGroupFitCurvaturePenalty()
@@ -1107,7 +1042,7 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         self._ui.align_widget.alignScaleProportion_lineEdit.setEnabled(is_align_markers or is_align_groups)
 
     def _alignRotationEntered(self):
-        values = QLineEdit_parseVector3(self._ui.align_widget.alignRotationManual_lineEdit)
+        values = parse_vector_3(self._ui.align_widget.alignRotationManual_lineEdit)
         if values:
             self._getAlign().setRotation(values)
         else:
@@ -1115,7 +1050,7 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         # self._updateAlignWidgets()
 
     def _alignScaleEntered(self):
-        value = QLineEdit_parseRealNonNegative(self._ui.align_widget.alignScaleManual_lineEdit)
+        value = parse_real_non_negative(self._ui.align_widget.alignScaleManual_lineEdit)
         if value > 0.0:
             self._getAlign().setScale(value)
         else:
@@ -1123,12 +1058,12 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         # self._updateAlignWidgets()
 
     def _alignScaleProportionEntered(self):
-        value = QLineEdit_parseRealNonNegative(self._ui.align_widget.alignScaleProportion_lineEdit)
+        value = parse_real_non_negative(self._ui.align_widget.alignScaleProportion_lineEdit)
         self._getAlign().setScaleProportion(value)
         # self._updateAlignWidgets()
 
     def _alignTranslationEntered(self):
-        values = QLineEdit_parseVector3(self._ui.align_widget.alignTranslationManual_lineEdit)
+        values = parse_vector_3(self._ui.align_widget.alignTranslationManual_lineEdit)
         if values:
             self._getAlign().setTranslation(values)
         else:
@@ -1145,11 +1080,11 @@ class GeometryFitterWidget(QtWidgets.QWidget):
                 self._alignScaleEntered()
                 self._alignTranslationEntered()
             else:
-                values = QLineEdit_parseVector3(self._ui.align_widget.alignRotationAutoValue_label)
+                values = parse_vector_3(self._ui.align_widget.alignRotationAutoValue_label)
                 align.setRotation(values if values else [0, 0, 0])
-                value = QLineEdit_parseRealNonNegative(self._ui.align_widget.alignScaleAutoValue_label)
+                value = parse_real_non_negative(self._ui.align_widget.alignScaleAutoValue_label)
                 align.setScale(value if value else 1)
-                values = QLineEdit_parseVector3(self._ui.align_widget.alignTranslationAutoValue_label)
+                values = parse_vector_3(self._ui.align_widget.alignTranslationAutoValue_label)
                 align.setTranslation(values if values else [0, 0, 0])
 
     def _applyAlignSettings(self, reorder=False):
