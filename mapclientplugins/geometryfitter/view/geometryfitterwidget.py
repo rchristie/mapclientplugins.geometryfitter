@@ -7,12 +7,11 @@ import webbrowser
 from PySide6 import QtCore, QtWidgets
 
 from cmlibs.maths.vectorops import dot, magnitude, mult, normalize, sub
-from cmlibs.utils.ui import parse_real_non_negative, parse_vector_3, parse_vector, parse_real
 from cmlibs.utils.zinc.field import field_is_managed_coordinates, field_is_managed_group, \
     field_is_managed_real_1_to_3_components, field_is_managed_group_mesh
 from cmlibs.widgets.handlers.modelalignment import ModelAlignment
 from cmlibs.widgets.handlers.scenemanipulation import SceneManipulation
-from cmlibs.widgets.utils import set_wait_cursor
+from cmlibs.widgets.utils import parse_real_non_negative, parse_vector_3, parse_vector, parse_real, set_wait_cursor
 from cmlibs.zinc.field import Field
 
 from scaffoldfitter.fitterstepalign import FitterStepAlign

@@ -38,8 +38,8 @@ readme = readfile("README.rst", split=True)[3:]  # skip title
 requires = [
     # minimal requirements listing
     "cmlibs.maths >= 0.3",
-    "cmlibs.utils >= 0.6",
-    "cmlibs.widgets >= 0.4",
+    "cmlibs.utils > 0.10.0",
+    "cmlibs.widgets >= 0.7.0",
     "cmlibs.zinc >= 4.0",
     "scaffoldfitter >= 0.10",
     "PySide6"
