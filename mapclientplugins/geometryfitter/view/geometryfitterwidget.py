@@ -63,9 +63,21 @@ def QLineEdit_parseVectors(lineedit):
     return None
 
 
-def QLineEdit_parseRealNonNegative(lineedit):
+def QLineEdit_parseReal(lineedit, failValue=0.0):
     """
-    Return non-negative real value from line edit text, or negative if failed.
+    Return real value from line edit text, or failValue if not a float.
+    """
+    try:
+        value = float(lineedit.text())
+        return value
+    except:
+        pass
+    return failValue
+
+
+def QLineEdit_parseRealNonNegative(lineedit, failValue=-1.0):
+    """
+    Return non-negative real value from line edit text, or failValue if negative or invalid.
     """
     try:
         value = float(lineedit.text())
@@ -73,7 +85,7 @@ def QLineEdit_parseRealNonNegative(lineedit):
             return value
     except:
         pass
-    return -1.0
+    return failValue
 
 
 def _documentation_button_clicked():
@@ -587,6 +599,8 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         self._ui.groupSettings_widget.groupConfigCentralProjectionSet_checkBox.clicked.connect(self._groupConfigCentralProjectionSetClicked)
         self._ui.groupSettings_widget.groupConfigDataProportion_checkBox.clicked.connect(self._groupConfigDataProportionClicked)
         self._ui.groupSettings_widget.groupConfigDataProportion_lineEdit.editingFinished.connect(self._groupConfigDataProportionEntered)
+        self._ui.groupSettings_widget.groupConfigOutlierLength_checkBox.clicked.connect(self._groupConfigOutlierLengthClicked)
+        self._ui.groupSettings_widget.groupConfigOutlierLength_lineEdit.editingFinished.connect(self._groupConfigOutlierLengthEntered)
         self._ui.groupSettings_widget.groupFitDataWeight_checkBox.clicked.connect(self._groupFitDataWeightClicked)
         self._ui.groupSettings_widget.groupFitDataWeight_lineEdit.editingFinished.connect(self._groupFitDataWeightEntered)
         self._ui.groupSettings_widget.groupFitDataSlidingFactor_checkBox.clicked.connect(self._groupFitDataSlidingFactorClicked)
@@ -608,6 +622,7 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         if isConfig:
             self._updateGroupConfigCentralProjection()
             self._updateGroupConfigDataProportion()
+            self._updateGroupConfigOutlierLength()
         elif isFit:
             self._updateGroupFitDataWeight()
             self._updateGroupFitDataSlidingFactor()
@@ -618,6 +633,8 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         self._ui.groupSettings_widget.groupConfigCentralProjectionSet_checkBox.setVisible(isConfig)
         self._ui.groupSettings_widget.groupConfigDataProportion_checkBox.setVisible(isConfig)
         self._ui.groupSettings_widget.groupConfigDataProportion_lineEdit.setVisible(isConfig)
+        self._ui.groupSettings_widget.groupConfigOutlierLength_checkBox.setVisible(isConfig)
+        self._ui.groupSettings_widget.groupConfigOutlierLength_lineEdit.setVisible(isConfig)
         self._ui.groupSettings_widget.groupFitDataWeight_checkBox.setVisible(isFit)
         self._ui.groupSettings_widget.groupFitDataWeight_lineEdit.setVisible(isFit)
         self._ui.groupSettings_widget.groupFitDataSlidingFactor_checkBox.setVisible(isFit)
@@ -722,6 +739,31 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         groupName = self._getGroupSettingsGroupName()
         self._getConfig().setGroupDataProportion(groupName, value)
         self._updateGroupConfigDataProportion()
+
+    def _updateGroupConfigOutlierLength(self):
+        checkBoxTristate, checkBoxState, lineEditDisable, outlierLengthStr = \
+            self._getGroupSettingDisplayState(self._getConfig().getGroupOutlierLength)
+        self._ui.groupSettings_widget.groupConfigOutlierLength_checkBox.setTristate(checkBoxTristate)
+        self._ui.groupSettings_widget.groupConfigOutlierLength_checkBox.setCheckState(checkBoxState)
+        self._ui.groupSettings_widget.groupConfigOutlierLength_lineEdit.setDisabled(lineEditDisable)
+        self._ui.groupSettings_widget.groupConfigOutlierLength_lineEdit.setText(outlierLengthStr)
+
+    def _groupConfigOutlierLengthClicked(self):
+        checkState = self._ui.groupSettings_widget.groupConfigOutlierLength_checkBox.checkState()
+        groupName = self._getGroupSettingsGroupName()
+        if checkState == QtCore.Qt.CheckState.Unchecked:
+            self._getConfig().setGroupOutlierLength(groupName, None)
+        elif checkState == QtCore.Qt.CheckState.PartiallyChecked:
+            self._getConfig().clearGroupOutlierLength(groupName)
+        else:
+            self._groupConfigOutlierLengthEntered()
+        self._updateGroupConfigOutlierLength()
+
+    def _groupConfigOutlierLengthEntered(self):
+        value = QLineEdit_parseReal(self._ui.groupSettings_widget.groupConfigOutlierLength_lineEdit)
+        groupName = self._getGroupSettingsGroupName()
+        self._getConfig().setGroupOutlierLength(groupName, value)
+        self._updateGroupConfigOutlierLength()
 
     def _updateGroupFitDataWeight(self):
         checkBoxTristate, checkBoxState, lineEditDisable, dataWeightStr = \

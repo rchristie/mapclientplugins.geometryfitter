@@ -105,7 +105,17 @@ The first step is always Config type, with an Initial configuration box in which
 
 .. tip:: Holding the mouse pointer over many of the config, align and fit options shows "tool tips" describing their use.
 
-The rest of the Config step parameters control what data is projected and how. Adding another Config step later in the sequence allows you to cancel or override any projection settings. Parameters are specified either for a particular named group in the model and data, or if set for special group ``- Default -``, the values are used for any group without specifically set values. The *Data proportion* from 0.0 (none) to 1.0 (all) reduces the data being projected if there is too much to see or it affects performance. The *Central projection* is more specialized: if set (by checking the option AND the *Set* checkbox), the geometric centre of the data and the scaffold group are calculated, and the data is projected as if these are at the same point; this is useful for early fitting steps where small features are not close to their matching data, but it is usually cancelled for later fit steps (but occasionally it converges to the same solution whether on or off). The Central projection feature has been used to help fit the pink pulmonary vein groups in the rat heart atria in :numref:`fig-mcpgf-scaffold-data-annotation-groups`.
+The rest of the Config step parameters control what data is projected and how. Adding another Config step later in the sequence allows you to cancel or override any projection settings. Parameters are specified either for a particular named group in the model and data, or if set for special group ``- Default -``, the values are used for any group without specifically set values.
+
+The *Data proportion* from 0.0 (none) to 1.0 (all) reduces the data being projected if there is too much to see or it affects performance.
+
+The *Outlier length* controls how remaining data points are excluded depending on their projection lengths:
+
+1. Value < 0.0 specifies proportion of maximum projection length to exclude, e.g. -0.1 excludes data points within 10% of the maximum. Values below -1.0 will be capped to -1.0.
+2. Value 0.0 disables outlier filtering and includes all data (subject to other filters).
+3. Value > 0.0 specifies absolute projection length above which data points are excluded.
+
+The *Central projection* is more specialized: if set (by checking the option AND the *Set* checkbox), the geometric centre of the data and the scaffold group are calculated, and the data is projected as if these are at the same point; this is useful for early fitting steps where small features are not close to their matching data, but it is usually cancelled for later fit steps (but occasionally it converges to the same solution whether on or off). The Central projection feature has been used to help fit the pink pulmonary vein groups in the rat heart atria in :numref:`fig-mcpgf-scaffold-data-annotation-groups`.
 
 Config parameters for each group are inherited from prior Config steps for that group, and if not set, from the ``- Default -`` group. Previously set group parameters are shown as "half-checked" (using a "tri-state" checkbox), and this can be overridden with a new value (fully checked) or cancelled to prior defaults (unchecked). The value used for that group is always shown.
 
