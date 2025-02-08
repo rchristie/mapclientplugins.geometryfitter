@@ -417,14 +417,17 @@ class GeometryFitterWidget(QtWidgets.QWidget):
 
     def _displayErrors(self):
         rmsError, maxError = self._fitter.getDataRMSAndMaximumProjectionError()
+        element_id, value = self._fitter.getModelWorstElementJacobianInfo()
         rms_error_text = "-" if rmsError is None else f"{rmsError}"
         self._ui.displayRMSError_lineEdit.setText(rms_error_text)
         self._ui.displayRMSError_lineEdit.setCursorPosition(0)
         max_error_text = "-" if maxError is None else f"{maxError}"
         self._ui.displayMaxError_lineEdit.setText(max_error_text)
         self._ui.displayMaxError_lineEdit.setCursorPosition(0)
-        logger.info(f"RMS Error: {rms_error_text}")
-        logger.info(f"Max. Error: {max_error_text}")
+        model_quality = "good" if value > 0.5 else "fair" if value > 1e-07 else "poor" if value > -0.01 else "bad"
+        self._ui.displayModelQuality_lineEdit.setText(model_quality)
+        self._ui.displayModelQuality_lineEdit.setCursorPosition(0)
+        logger.info(f"RMS Error: {rms_error_text}, Max. Error: {max_error_text}, Model Quality: {model_quality}")
 
     def _displayGroupChanged(self, index):
         """
