@@ -424,7 +424,7 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         max_error_text = "-" if maxError is None else f"{maxError}"
         self._ui.displayMaxError_lineEdit.setText(max_error_text)
         self._ui.displayMaxError_lineEdit.setCursorPosition(0)
-        model_quality = "=" if value is None else f"{value:.8g}"
+        model_quality = "-" if value is None else f"{value:.8g}"
         self._ui.displayModelQuality_lineEdit.setText(model_quality)
         self._ui.displayModelQuality_lineEdit.setCursorPosition(0)
         logger.info(f"RMS Error: {rms_error_text}, Max. Error: {max_error_text}, Model Quality: {model_quality}")
