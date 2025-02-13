@@ -603,7 +603,7 @@ class Ui_GeometryFitterWidget(object):
         self.displayMaxError_label.setText(QCoreApplication.translate("GeometryFitterWidget", u"Maximum error:", None))
         self.displayMinimumJacobianDeterminant_label.setText(QCoreApplication.translate("GeometryFitterWidget", u"Min. Jacobian determinant:", None))
 #if QT_CONFIG(tooltip)
-        self.displayMinimumJacobianDeterminant_lineEdit.setToolTip(QCoreApplication.translate("GeometryFitterWidget", u"<html><head/><body><p>This calculation is only valid for 3-D volumetric elements.</p><p>For 2-D and 1-D elements the calculation returns zero.</p></body></html>", None))
+        self.displayMinimumJacobianDeterminant_lineEdit.setToolTip(QCoreApplication.translate("GeometryFitterWidget", u"<html><head/><body><p>The value shown here is the minimum ratio of differential fitted over reference volumes in the model. If this value is near zero or negative, in general, this indicates a bad element in the model.</p><p>This calculation is only valid for 3-D volumetric elements. For 2-D and 1-D elements the calculation returns zero.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.controls_tabWidget.setTabText(self.controls_tabWidget.indexOf(self.error_statistics_tab), QCoreApplication.translate("GeometryFitterWidget", u"Error Statistics", None))
         self.pushButtonDocumentation.setText(QCoreApplication.translate("GeometryFitterWidget", u"Online Documentation", None))

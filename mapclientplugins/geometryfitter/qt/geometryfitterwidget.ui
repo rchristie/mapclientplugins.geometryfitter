@@ -838,7 +838,7 @@
               <item row="2" column="1">
                <widget class="QLineEdit" name="displayMinimumJacobianDeterminant_lineEdit">
                 <property name="toolTip">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This calculation is only valid for 3-D volumetric elements.&lt;/p&gt;&lt;p&gt;For 2-D and 1-D elements the calculation returns zero.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The value shown here is the minimum ratio of differential fitted over reference volumes in the model. If this value is near zero or negative, in general, this indicates a bad element in the model.&lt;/p&gt;&lt;p&gt;This calculation is only valid for 3-D volumetric elements. For 2-D and 1-D elements the calculation returns zero.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                 <property name="readOnly">
                  <bool>true</bool>
