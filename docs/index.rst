@@ -217,3 +217,16 @@ The **Geometry Fitter** has some features which may help fitting in certain case
 2. If a *Fibre orientation* field is specified in the initial Config step, the deformation gradients (to penalise) are measured with respect to local fibre axes in each element. At this time only the in-built "zero fibres" field is practical for use (otherwise choose "-" to disable). This reorients the reference coordinates to a local coordinate system where the first direction is in line with the local element axis 1 (show "Element axes" graphics to see), the second direction is normal to this in the 1-2 plane of the element axes, and the third direction is normal to both of these. Uses include:
     * For scaffolds where the third element axis is through the wall of a hollow structure, multi-component deformation penalties can be applied separately in-plane (reference components 1 and 2) and through the wall (reference component 3). This can be used to make a group stiffer in-plane, but more pliable through the wall. Likewise, increasing penalties on shear deformation in the 1-3 and 2-3 directions will reduce these out-of-plane shear deformations during fitting.
     * When fitting 3-component coordinate fields on a 2-D surface scaffold, a fibre orientation field must be set in order to use deformation penalties. This is because the gradients must be transformed to be with respect to in-plane directions.
+
+.. _mcpgf-section-error-statistics
+
+Error Statistics
+----------------
+
+In the *Error Statistics* tab you can view the current RMS, maximum projection errors, which the fit aims to minimize, and the minimum Jacobian determinant value for the model.
+
+.. note::
+
+  The minimum Jacobian determinant calculation cannot calculate the determinant of elements that are constructed with collapsed nodes.
+  For elements constructed with collapsed nodes the minimum Jacobian determinant is set at zero (0.0).
+  As such, in the case of models with elements constructed with collapsed nodes only elements with a negative minimum Jacobian determinant can be detected.
