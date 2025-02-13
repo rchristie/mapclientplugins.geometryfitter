@@ -484,16 +484,16 @@ class Ui_GeometryFitterWidget(object):
 
         self.formLayout_2.setWidget(1, QFormLayout.FieldRole, self.displayMaxError_lineEdit)
 
-        self.displayModelQuality_label = QLabel(self.error_group_frame)
-        self.displayModelQuality_label.setObjectName(u"displayModelQuality_label")
+        self.displayMinimumJacobianDeterminant_label = QLabel(self.error_group_frame)
+        self.displayMinimumJacobianDeterminant_label.setObjectName(u"displayMinimumJacobianDeterminant_label")
 
-        self.formLayout_2.setWidget(2, QFormLayout.LabelRole, self.displayModelQuality_label)
+        self.formLayout_2.setWidget(2, QFormLayout.LabelRole, self.displayMinimumJacobianDeterminant_label)
 
-        self.displayModelQuality_lineEdit = QLineEdit(self.error_group_frame)
-        self.displayModelQuality_lineEdit.setObjectName(u"displayModelQuality_lineEdit")
-        self.displayModelQuality_lineEdit.setReadOnly(True)
+        self.displayMinimumJacobianDeterminant_lineEdit = QLineEdit(self.error_group_frame)
+        self.displayMinimumJacobianDeterminant_lineEdit.setObjectName(u"displayMinimumJacobianDeterminant_lineEdit")
+        self.displayMinimumJacobianDeterminant_lineEdit.setReadOnly(True)
 
-        self.formLayout_2.setWidget(2, QFormLayout.FieldRole, self.displayModelQuality_lineEdit)
+        self.formLayout_2.setWidget(2, QFormLayout.FieldRole, self.displayMinimumJacobianDeterminant_lineEdit)
 
 
         self.verticalLayout_12.addWidget(self.error_group_frame)
@@ -601,7 +601,10 @@ class Ui_GeometryFitterWidget(object):
         self.controls_tabWidget.setTabText(self.controls_tabWidget.indexOf(self.display_tab), QCoreApplication.translate("GeometryFitterWidget", u"Display", None))
         self.displayRMSError_label.setText(QCoreApplication.translate("GeometryFitterWidget", u"RMS error:", None))
         self.displayMaxError_label.setText(QCoreApplication.translate("GeometryFitterWidget", u"Maximum error:", None))
-        self.displayModelQuality_label.setText(QCoreApplication.translate("GeometryFitterWidget", u"Model quality:", None))
+        self.displayMinimumJacobianDeterminant_label.setText(QCoreApplication.translate("GeometryFitterWidget", u"Min. Jacobian determinant:", None))
+#if QT_CONFIG(tooltip)
+        self.displayMinimumJacobianDeterminant_lineEdit.setToolTip(QCoreApplication.translate("GeometryFitterWidget", u"<html><head/><body><p>This calculation is only valid for 3-D volumetric elements.</p><p>For 2-D and 1-D elements the calculation returns zero.</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
         self.controls_tabWidget.setTabText(self.controls_tabWidget.indexOf(self.error_statistics_tab), QCoreApplication.translate("GeometryFitterWidget", u"Error Statistics", None))
         self.pushButtonDocumentation.setText(QCoreApplication.translate("GeometryFitterWidget", u"Online Documentation", None))
         self.viewAll_pushButton.setText(QCoreApplication.translate("GeometryFitterWidget", u"View All", None))
