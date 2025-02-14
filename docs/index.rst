@@ -227,6 +227,5 @@ In the *Error Statistics* tab you can view the current RMS, maximum projection e
 
 .. note::
 
-  The minimum Jacobian determinant calculation cannot calculate the determinant of elements that are constructed with collapsed nodes.
-  For elements constructed with collapsed nodes the minimum Jacobian determinant is set at zero (0.0).
-  As such, in the case of models with elements constructed with collapsed nodes only elements with a negative minimum Jacobian determinant can be detected.
+  The minimum Jacobian determinant calculation does not work on collapsed faces, edges or points of elements and always evaluates to zero (0.0) at those points.
+  Hence for models with collapsed elements only negative minimum Jacobian determinants can be detected.
