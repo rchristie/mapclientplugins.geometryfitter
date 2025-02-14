@@ -21,14 +21,14 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QDockWidget, QFormLayout
     QSizePolicy, QSpacerItem, QTabWidget, QVBoxLayout,
     QWidget)
 
-from mapclientplugins.geometryfitter.view.alignwidget import AlignWidget
 from cmlibs.widgets.basesceneviewerwidget import BaseSceneviewerWidget
 from cmlibs.widgets.draggablelistwidget import DraggableListWidget
 from cmlibs.widgets.fieldchooserwidget import FieldChooserWidget
+from mapclientplugins.geometryfitter.view.alignwidget import AlignWidget
+from mapclientplugins.geometryfitter.view.configwidget import ConfigWidget
 from mapclientplugins.geometryfitter.view.fitwidget import FitWidget
 from mapclientplugins.geometryfitter.view.groupsettingswidget import GroupSettingsWidget
 from mapclientplugins.geometryfitter.view.initialconfigwidget import InitialConfigWidget
-from mapclientplugins.geometryfitter.view.configwidget import ConfigWidget
 
 class Ui_GeometryFitterWidget(object):
     def setupUi(self, GeometryFitterWidget):
@@ -115,7 +115,7 @@ class Ui_GeometryFitterWidget(object):
         self.stepedit_scrollArea.setWidgetResizable(True)
         self.stepedit_scrollAreaWidgetContents = QWidget()
         self.stepedit_scrollAreaWidgetContents.setObjectName(u"stepedit_scrollAreaWidgetContents")
-        self.stepedit_scrollAreaWidgetContents.setGeometry(QRect(0, 0, 435, 382))
+        self.stepedit_scrollAreaWidgetContents.setGeometry(QRect(0, 0, 435, 114))
         self.verticalLayout_3 = QVBoxLayout(self.stepedit_scrollAreaWidgetContents)
         self.verticalLayout_3.setObjectName(u"verticalLayout_3")
         self.initialConfig_widget = InitialConfigWidget(self.stepedit_scrollAreaWidgetContents)
@@ -484,6 +484,17 @@ class Ui_GeometryFitterWidget(object):
 
         self.formLayout_2.setWidget(1, QFormLayout.FieldRole, self.displayMaxError_lineEdit)
 
+        self.displayMinimumJacobianDeterminant_label = QLabel(self.error_group_frame)
+        self.displayMinimumJacobianDeterminant_label.setObjectName(u"displayMinimumJacobianDeterminant_label")
+
+        self.formLayout_2.setWidget(2, QFormLayout.LabelRole, self.displayMinimumJacobianDeterminant_label)
+
+        self.displayMinimumJacobianDeterminant_lineEdit = QLineEdit(self.error_group_frame)
+        self.displayMinimumJacobianDeterminant_lineEdit.setObjectName(u"displayMinimumJacobianDeterminant_lineEdit")
+        self.displayMinimumJacobianDeterminant_lineEdit.setReadOnly(True)
+
+        self.formLayout_2.setWidget(2, QFormLayout.FieldRole, self.displayMinimumJacobianDeterminant_lineEdit)
+
 
         self.verticalLayout_12.addWidget(self.error_group_frame)
 
@@ -590,6 +601,10 @@ class Ui_GeometryFitterWidget(object):
         self.controls_tabWidget.setTabText(self.controls_tabWidget.indexOf(self.display_tab), QCoreApplication.translate("GeometryFitterWidget", u"Display", None))
         self.displayRMSError_label.setText(QCoreApplication.translate("GeometryFitterWidget", u"RMS error:", None))
         self.displayMaxError_label.setText(QCoreApplication.translate("GeometryFitterWidget", u"Maximum error:", None))
+        self.displayMinimumJacobianDeterminant_label.setText(QCoreApplication.translate("GeometryFitterWidget", u"Min. Jacobian determinant:", None))
+#if QT_CONFIG(tooltip)
+        self.displayMinimumJacobianDeterminant_lineEdit.setToolTip(QCoreApplication.translate("GeometryFitterWidget", u"<html><head/><body><p>The value shown here is the minimum ratio of differential fitted over reference volumes in the model. If this value is near zero or negative, in general, this indicates a bad element in the model.</p><p>This calculation is only valid for 3-D volumetric elements. For 2-D and 1-D elements the calculation returns zero.</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
         self.controls_tabWidget.setTabText(self.controls_tabWidget.indexOf(self.error_statistics_tab), QCoreApplication.translate("GeometryFitterWidget", u"Error Statistics", None))
         self.pushButtonDocumentation.setText(QCoreApplication.translate("GeometryFitterWidget", u"Online Documentation", None))
         self.viewAll_pushButton.setText(QCoreApplication.translate("GeometryFitterWidget", u"View All", None))

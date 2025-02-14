@@ -154,7 +154,7 @@
                <x>0</x>
                <y>0</y>
                <width>435</width>
-               <height>382</height>
+               <height>114</height>
               </rect>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_3">
@@ -828,6 +828,23 @@
                 </property>
                </widget>
               </item>
+              <item row="2" column="0">
+               <widget class="QLabel" name="displayMinimumJacobianDeterminant_label">
+                <property name="text">
+                 <string>Min. Jacobian determinant:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <widget class="QLineEdit" name="displayMinimumJacobianDeterminant_lineEdit">
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The value shown here is the minimum ratio of differential fitted over reference volumes in the model. If this value is near zero or negative, in general, this indicates a bad element in the model.&lt;/p&gt;&lt;p&gt;This calculation is only valid for 3-D volumetric elements. For 2-D and 1-D elements the calculation returns zero.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="readOnly">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
              </layout>
             </widget>
            </item>
@@ -933,13 +950,13 @@
   <customwidget>
    <class>InitialConfigWidget</class>
    <extends>QWidget</extends>
-   <header>initialconfigwidget.h</header>
+   <header>mapclientplugins/geometryfitter/view/initialconfigwidget.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>
    <class>AlignWidget</class>
    <extends>QWidget</extends>
-   <header>alignwidget.h</header>
+   <header>mapclientplugins/geometryfitter/view/alignwidget.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>
@@ -951,13 +968,13 @@
   <customwidget>
    <class>GroupSettingsWidget</class>
    <extends>QWidget</extends>
-   <header>groupsettingswidget.h</header>
+   <header>mapclientplugins/geometryfitter/view/groupsettingswidget.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>
    <class>FitWidget</class>
    <extends>QWidget</extends>
-   <header>fitwidget.h</header>
+   <header>mapclientplugins/geometryfitter/view/fitwidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
