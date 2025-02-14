@@ -227,5 +227,5 @@ In the *Error Statistics* tab you can view the current RMS, maximum projection e
 
 .. note::
 
-  The minimum Jacobian determinant calculation does not work on collapsed faces or edges elements and always evaluates to zero (0.0) at those points.
+  The minimum Jacobian determinant calculation does not work on collapsed faces or edges of elements, and always evaluates to zero (0.0) at those points.
   Hence for models with collapsed elements only negative minimum Jacobian determinants can be detected.
