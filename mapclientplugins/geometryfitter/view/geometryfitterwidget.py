@@ -368,6 +368,7 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         self._ui.displaySurfacesExterior_checkBox.clicked.connect(self._displaySurfacesExteriorClicked)
         self._ui.displaySurfacesTranslucent_checkBox.clicked.connect(self._displaySurfacesTranslucentClicked)
         self._ui.displaySurfacesWireframe_checkBox.clicked.connect(self._displaySurfacesWireframeClicked)
+        self._ui.displayZeroJacobianContours_checkBox.clicked.connect(self._displayZeroJacobianContoursClicked)
         self._setupDisplayGroupWidgets()
 
     def _setupDisplayGroupWidgets(self):
@@ -413,6 +414,7 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         self._ui.displaySurfacesExterior_checkBox.setChecked(self._model.isDisplaySurfacesExterior())
         self._ui.displaySurfacesTranslucent_checkBox.setChecked(self._model.isDisplaySurfacesTranslucent())
         self._ui.displaySurfacesWireframe_checkBox.setChecked(self._model.isDisplaySurfacesWireframe())
+        self._ui.displayZeroJacobianContours_checkBox.setChecked(self._model.isDisplayZeroJacobianContours())
         self._displayErrors()
 
     def _displayErrors(self):
@@ -519,6 +521,9 @@ class GeometryFitterWidget(QtWidgets.QWidget):
 
     def _displaySurfacesWireframeClicked(self):
         self._model.setDisplaySurfacesWireframe(self._ui.displaySurfacesWireframe_checkBox.isChecked())
+
+    def _displayZeroJacobianContoursClicked(self):
+        self._model.setDisplayZeroJacobianContours(self._ui.displayZeroJacobianContours_checkBox.isChecked())
 
     # === group setting widgets ===
 
