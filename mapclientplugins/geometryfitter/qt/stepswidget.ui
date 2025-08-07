@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Steps</class>
+ <widget class="QWidget" name="Steps">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>477</width>
+    <height>346</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Steps</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QFrame" name="stepsAddDelete_frame">
+     <property name="frameShape">
+      <enum>QFrame::NoFrame</enum>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout_10">
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item>
+       <widget class="QPushButton" name="stepsAddAlign_pushButton">
+        <property name="text">
+         <string>Add Align</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="stepsAddConfig_pushButton">
+        <property name="text">
+         <string>Add Config</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="stepsAddFit_pushButton">
+        <property name="text">
+         <string>Add Fit</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="stepsDelete_pushButton">
+        <property name="text">
+         <string>Delete</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="DraggableListWidget" name="steps_listWidget" native="true"/>
+   </item>
+   <item>
+    <widget class="QScrollArea" name="stepedit_scrollArea">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::NoFrame</enum>
+     </property>
+     <property name="horizontalScrollBarPolicy">
+      <enum>Qt::ScrollBarAsNeeded</enum>
+     </property>
+     <property name="widgetResizable">
+      <bool>true</bool>
+     </property>
+     <widget class="QWidget" name="stepedit_scrollAreaWidgetContents">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>453</width>
+        <height>114</height>
+       </rect>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_3">
+       <item>
+        <widget class="InitialConfigWidget" name="initialConfig_widget" native="true"/>
+       </item>
+       <item>
+        <widget class="AlignWidget" name="align_widget" native="true"/>
+       </item>
+       <item>
+        <widget class="FitWidget" name="fit_widget" native="true"/>
+       </item>
+       <item>
+        <widget class="ConfigWidget" name="config_widget" native="true"/>
+       </item>
+       <item>
+        <widget class="GroupSettingsWidget" name="groupSettings_widget" native="true"/>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>DraggableListWidget</class>
+   <extends>QWidget</extends>
+   <header>cmlibs/widgets/draggablelistwidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>InitialConfigWidget</class>
+   <extends>QWidget</extends>
+   <header>mapclientplugins/geometryfitter/view/initialconfigwidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>AlignWidget</class>
+   <extends>QWidget</extends>
+   <header>mapclientplugins/geometryfitter/view/alignwidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ConfigWidget</class>
+   <extends>QWidget</extends>
+   <header>mapclientplugins/geometryfitter/view/configwidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>GroupSettingsWidget</class>
+   <extends>QWidget</extends>
+   <header>mapclientplugins/geometryfitter/view/groupsettingswidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>FitWidget</class>
+   <extends>QWidget</extends>
+   <header>mapclientplugins/geometryfitter/view/fitwidget.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

@@ -9,8 +9,12 @@ from PySide6 import QtCore, QtWidgets
 from cmlibs.maths.vectorops import dot, magnitude, mult, normalize, sub
 from cmlibs.utils.zinc.field import field_is_managed_coordinates, field_is_managed_group, \
     field_is_managed_real_1_to_3_components, field_is_managed_group_mesh, get_group_list
+from cmlibs.widgets.collapsibleboxwidget import CollapsibleBox
 from cmlibs.widgets.handlers.modelalignment import ModelAlignment
 from cmlibs.widgets.handlers.scenemanipulation import SceneManipulation
+from cmlibs.widgets.helpers.widgetvisibility import setting_visibility
+from cmlibs.widgets.ui.ui_buttonswidget import Ui_Buttons
+from cmlibs.widgets.ui.ui_displaysettingswidget import Ui_DisplaySettings
 from cmlibs.widgets.utils import parse_real_non_negative, parse_vector_3, parse_vector, parse_real, set_wait_cursor
 from cmlibs.zinc.field import Field, FieldGroup
 
@@ -19,6 +23,8 @@ from scaffoldfitter.fitterstepconfig import FitterStepConfig
 from scaffoldfitter.fitterstepfit import FitterStepFit
 
 from mapclientplugins.geometryfitter.view.ui_geometryfitterwidget import Ui_GeometryFitterWidget
+from mapclientplugins.geometryfitter.view.ui_stepswidget import Ui_Steps
+from mapclientplugins.geometryfitter.view.ui_errorstatisticswidget import Ui_ErrorStatistics
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +33,7 @@ def _documentation_button_clicked():
     webbrowser.open("https://abi-mapping-tools.readthedocs.io/en/latest/mapclientplugins.geometryfitter/docs/index.html")
 
 
-class GeometryFitterWidget(QtWidgets.QWidget):
+class GeometryFitterWidget(QtWidgets.QMainWindow):
     """
     User interface for github.com/ABI-Software/scaffoldfitter
     """
@@ -36,15 +42,16 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         """
         """
         super(GeometryFitterWidget, self).__init__(parent)
+        self._model = model
         self._ui = Ui_GeometryFitterWidget()
         self._ui.setupUi(self)
+        self._setup_dock_widget()
         self._ui.baseSceneviewerWidget.set_grab_focus(True)
         self._ui.baseSceneviewerWidget.set_context(model.getContext())
         self._ui.baseSceneviewerWidget.register_handler(SceneManipulation())
         self._align_model_handler = ModelAlignment(QtCore.Qt.Key.Key_A)
         self._align_model_handler.set_model(model)
         self._ui.baseSceneviewerWidget.register_handler(self._align_model_handler)
-        self._model = model
         self._fitter = self._model.getFitter()
         self._currentFitterStep = self._fitter.getInitialFitterStepConfig()  # always exists
         self._callback = None
@@ -53,6 +60,46 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         self._updateGeneralWidgets()
         self._updateDisplayWidgets()
         self._makeConnections()
+
+    def _setup_dock_widget(self):
+        """
+        Set up the dock widget for the field fitter.
+        """
+        parent_widget = QtWidgets.QWidget(self)
+
+        layout = QtWidgets.QVBoxLayout(parent_widget)
+        layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        self._identifier_label = QtWidgets.QLabel("Identifier: " + self._model.getIdentifier())
+        layout.addWidget(self._identifier_label)
+
+        self._steps_ui = Ui_Steps()
+        self._error_statistics_ui = Ui_ErrorStatistics()
+        self._display_settings_ui = Ui_DisplaySettings()
+        self._buttons_ui = Ui_Buttons()
+
+        for ui in [self._steps_ui, self._error_statistics_ui, self._display_settings_ui]:
+            form_container = QtWidgets.QWidget()
+            ui.setupUi(form_container)
+            tools_box = CollapsibleBox(form_container.windowTitle(), checked=True if ui is self._steps_ui else False)
+            tools_box.add_widget(form_container)
+            layout.addWidget(tools_box, stretch=1)
+
+        spacer = QtWidgets.QSpacerItem(20, 20, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
+        layout.addSpacerItem(spacer)
+
+        form_container = QtWidgets.QWidget()
+        self._buttons_ui.setupUi(form_container)
+        layout.addWidget(form_container)
+
+        setting_visibility(self._display_settings_ui, 'geometryfitter')
+
+        self._dock_widget = QtWidgets.QDockWidget("Controls", self)
+        self._dock_widget.setObjectName("ControlsDock")
+        self._dock_widget.setWidget(parent_widget)
+
+        self.addDockWidget(QtCore.Qt.DockWidgetArea.LeftDockWidgetArea, self._dock_widget)
 
     def _graphics_ready(self):
         """
@@ -114,18 +161,18 @@ class GeometryFitterWidget(QtWidgets.QWidget):
     # === general widgets ===
 
     def _makeConnectionsGeneral(self):
-        self._ui.stepsAddAlign_pushButton.clicked.connect(self._stepsAddAlignClicked)
-        self._ui.stepsAddConfig_pushButton.clicked.connect(self._stepsAddConfigClicked)
-        self._ui.stepsAddFit_pushButton.clicked.connect(self._stepsAddFitClicked)
-        self._ui.stepsDelete_pushButton.clicked.connect(self._stepsDeleteClicked)
-        self._ui.steps_listWidget.itemClicked.connect(self._stepsListItemClicked)
-        self._ui.pushButtonDocumentation.clicked.connect(_documentation_button_clicked)
-        self._ui.done_pushButton.clicked.connect(self._doneButtonClicked)
-        self._ui.stdViews_pushButton.clicked.connect(self._stdViewsButtonClicked)
-        self._ui.viewAll_pushButton.clicked.connect(self._viewAllButtonClicked)
+        self._steps_ui.stepsAddAlign_pushButton.clicked.connect(self._stepsAddAlignClicked)
+        self._steps_ui.stepsAddConfig_pushButton.clicked.connect(self._stepsAddConfigClicked)
+        self._steps_ui.stepsAddFit_pushButton.clicked.connect(self._stepsAddFitClicked)
+        self._steps_ui.stepsDelete_pushButton.clicked.connect(self._stepsDeleteClicked)
+        self._steps_ui.steps_listWidget.itemClicked.connect(self._stepsListItemClicked)
+        self._buttons_ui.pushButtonDocumentation.clicked.connect(_documentation_button_clicked)
+        self._buttons_ui.done_pushButton.clicked.connect(self._doneButtonClicked)
+        self._buttons_ui.stdViews_pushButton.clicked.connect(self._stdViewsButtonClicked)
+        self._buttons_ui.viewAll_pushButton.clicked.connect(self._viewAllButtonClicked)
 
     def _updateGeneralWidgets(self):
-        self._ui.identifier_label.setText("Identifier:  " + self._model.getIdentifier())
+        self._identifier_label.setText("Identifier:  " + self._model.getIdentifier())
         self._buildStepsList()
 
     def _stepsAddAlignClicked(self):
@@ -192,7 +239,7 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         self._currentFitterStep = step
         if isinstance(self._currentFitterStep, FitterStepAlign):
             self._model.setAlignStep(self._currentFitterStep)
-            self._ui.align_widget.set_mode(step.isAlignManually())
+            self._steps_ui.align_widget.set_mode(step.isAlignManually())
             self._model.setAlignSettingsUIUpdateCallback(self._updateAlignWidgets)
             self._model.setAlignSettingsChangeCallback(self._alignCallback)
         else:
@@ -202,7 +249,7 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         """
         Changes current step and possibly changes checked/run status.
         """
-        clickedIndex = self._ui.steps_listWidget.row(item)
+        clickedIndex = self._steps_ui.steps_listWidget.row(item)
         fitterSteps = self._fitter.getFitterSteps()
         step = fitterSteps[clickedIndex]
         if step != self._currentFitterStep:
@@ -222,8 +269,8 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         """
         Fill the steps list widget with the list of steps
         """
-        if self._ui.steps_listWidget is not None:
-            self._ui.steps_listWidget.clear()  # Must clear or holds on to steps references
+        if self._steps_ui.steps_listWidget is not None:
+            self._steps_ui.steps_listWidget.clear()  # Must clear or holds on to steps references
         firstStep = True
         fitterSteps = self._fitter.getFitterSteps()
         for step in fitterSteps:
@@ -242,11 +289,11 @@ class GeometryFitterWidget(QtWidgets.QWidget):
             else:
                 item.setFlags(item.flags() | QtCore.Qt.ItemFlag.ItemIsUserCheckable)
                 item.setCheckState(QtCore.Qt.CheckState.Checked if step.hasRun() else QtCore.Qt.CheckState.Unchecked)
-            self._ui.steps_listWidget.addItem(item)
+            self._steps_ui.steps_listWidget.addItem(item)
             if step == self._currentFitterStep:
-                self._ui.steps_listWidget.setCurrentItem(item)
-        self._ui.steps_listWidget.registerDropCallback(self._onStepsListItemChanged)
-        self._ui.steps_listWidget.show()
+                self._steps_ui.steps_listWidget.setCurrentItem(item)
+        self._steps_ui.steps_listWidget.registerDropCallback(self._onStepsListItemChanged)
+        self._steps_ui.steps_listWidget.show()
         self._updateFitterStepWidgets()
 
     def _onStepsListItemChanged(self, prevRow, newRow):
@@ -268,13 +315,13 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         :param step: Row index of item in step items.
         """
         index = self._fitter.getFitterSteps().index(step)
-        item = self._ui.steps_listWidget.item(index)
+        item = self._steps_ui.steps_listWidget.item(index)
         if step is not self._fitter.getInitialFitterStepConfig():
             item.setCheckState(QtCore.Qt.CheckState.Checked if step.hasRun() else QtCore.Qt.CheckState.Unchecked)
             if isinstance(step, FitterStepAlign):
                 self._updateAlignWidgets(align=step)
         if step == self._currentFitterStep:
-            self._ui.steps_listWidget.setCurrentItem(item)
+            self._steps_ui.steps_listWidget.setCurrentItem(item)
 
     def _updateFitterStepWidgets(self):
         """
@@ -290,18 +337,18 @@ class GeometryFitterWidget(QtWidgets.QWidget):
             self._updateConfigWidgets()
         elif isFit:
             self._updateFitWidgets()
-        self._ui.initialConfig_widget.setVisible(isInitialConfig)
-        self._ui.config_widget.setVisible(False)
-        self._ui.align_widget.setVisible(isAlign)
-        self._ui.fit_widget.setVisible(isFit)
-        self._ui.groupSettings_widget.setVisible(not isAlign)
-        self._ui.stepsDelete_pushButton.setEnabled(not isInitialConfig)
+        self._steps_ui.initialConfig_widget.setVisible(isInitialConfig)
+        self._steps_ui.config_widget.setVisible(False)
+        self._steps_ui.align_widget.setVisible(isAlign)
+        self._steps_ui.fit_widget.setVisible(isFit)
+        self._steps_ui.groupSettings_widget.setVisible(not isAlign)
+        self._steps_ui.stepsDelete_pushButton.setEnabled(not isInitialConfig)
 
     def _doneButtonClicked(self):
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.WaitCursor)
         try:
             self._model.done()
-            self._ui.dockWidget.setFloating(False)
+            self._dock_widget.setFloating(False)
             self._callback()
         finally:
             QtWidgets.QApplication.restoreOverrideCursor()
@@ -341,189 +388,189 @@ class GeometryFitterWidget(QtWidgets.QWidget):
     # === display widgets ===
 
     def _makeConnectionsDisplay(self):
-        self._ui.displayAxes_checkBox.clicked.connect(self._displayAxesClicked)
-        self._ui.displayMarkerDataPoints_checkBox.clicked.connect(self._displayMarkerDataPointsClicked)
-        self._ui.displayMarkerDataNames_checkBox.clicked.connect(self._displayMarkerDataNamesClicked)
-        self._ui.displayMarkerDataProjections_checkBox.clicked.connect(self._displayMarkerDataProjectionsClicked)
-        self._ui.displayMarkerPoints_checkBox.clicked.connect(self._displayMarkerPointsClicked)
-        self._ui.displayMarkerNames_checkBox.clicked.connect(self._displayMarkerNamesClicked)
-        self._ui.displayDataPoints_checkBox.clicked.connect(self._displayDataPointsClicked)
-        self._ui.displayDataProjections_checkBox.clicked.connect(self._displayDataProjectionsClicked)
-        self._ui.displayDataProjectionPoints_checkBox.clicked.connect(self._displayDataProjectionPointsClicked)
-        self._ui.displayNodePoints_checkBox.clicked.connect(self._displayNodePointsClicked)
-        self._ui.displayNodeNumbers_checkBox.clicked.connect(self._displayNodeNumbersClicked)
-        self._ui.displayNodeDerivativeLabelsD1_checkBox.clicked.connect(self._displayNodeDerivativeLabelsD1Clicked)
-        self._ui.displayNodeDerivativeLabelsD2_checkBox.clicked.connect(self._displayNodeDerivativeLabelsD2Clicked)
-        self._ui.displayNodeDerivativeLabelsD3_checkBox.clicked.connect(self._displayNodeDerivativeLabelsD3Clicked)
-        self._ui.displayNodeDerivativeLabelsD12_checkBox.clicked.connect(self._displayNodeDerivativeLabelsD12Clicked)
-        self._ui.displayNodeDerivativeLabelsD13_checkBox.clicked.connect(self._displayNodeDerivativeLabelsD13Clicked)
-        self._ui.displayNodeDerivativeLabelsD23_checkBox.clicked.connect(self._displayNodeDerivativeLabelsD23Clicked)
-        self._ui.displayNodeDerivativeLabelsD123_checkBox.clicked.connect(self._displayNodeDerivativeLabelsD123Clicked)
-        self._ui.displayNodeDerivatives_checkBox.clicked.connect(self._displayNodeDerivativesClicked)
-        self._ui.displayElementAxes_checkBox.clicked.connect(self._displayElementAxesClicked)
-        self._ui.displayElementNumbers_checkBox.clicked.connect(self._displayElementNumbersClicked)
-        self._ui.displayLines_checkBox.clicked.connect(self._displayLinesClicked)
-        self._ui.displayLinesExterior_checkBox.clicked.connect(self._displayLinesExteriorClicked)
-        self._ui.displaySurfaces_checkBox.clicked.connect(self._displaySurfacesClicked)
-        self._ui.displaySurfacesExterior_checkBox.clicked.connect(self._displaySurfacesExteriorClicked)
-        self._ui.displaySurfacesTranslucent_checkBox.clicked.connect(self._displaySurfacesTranslucentClicked)
-        self._ui.displaySurfacesWireframe_checkBox.clicked.connect(self._displaySurfacesWireframeClicked)
-        self._ui.displayZeroJacobianContours_checkBox.clicked.connect(self._displayZeroJacobianContoursClicked)
+        self._display_settings_ui.displayAxes_checkBox.clicked.connect(self._displayAxesClicked)
+        self._display_settings_ui.displayDataMarkerPoints_checkBox.clicked.connect(self._displayMarkerDataPointsClicked)
+        self._display_settings_ui.displayDataMarkerNames_checkBox.clicked.connect(self._displayMarkerDataNamesClicked)
+        self._display_settings_ui.displayMarkerDataProjections_checkBox.clicked.connect(self._displayMarkerDataProjectionsClicked)
+        self._display_settings_ui.displayMarkerPoints_checkBox.clicked.connect(self._displayMarkerPointsClicked)
+        self._display_settings_ui.displayMarkerNames_checkBox.clicked.connect(self._displayMarkerNamesClicked)
+        self._display_settings_ui.displayDataPoints_checkBox.clicked.connect(self._displayDataPointsClicked)
+        self._display_settings_ui.displayDataProjections_checkBox.clicked.connect(self._displayDataProjectionsClicked)
+        self._display_settings_ui.displayDataProjectionPoints_checkBox.clicked.connect(self._displayDataProjectionPointsClicked)
+        self._display_settings_ui.displayNodePoints_checkBox.clicked.connect(self._displayNodePointsClicked)
+        self._display_settings_ui.displayNodeNumbers_checkBox.clicked.connect(self._displayNodeNumbersClicked)
+        self._display_settings_ui.displayNodeDerivativeLabelsD1_checkBox.clicked.connect(self._displayNodeDerivativeLabelsD1Clicked)
+        self._display_settings_ui.displayNodeDerivativeLabelsD2_checkBox.clicked.connect(self._displayNodeDerivativeLabelsD2Clicked)
+        self._display_settings_ui.displayNodeDerivativeLabelsD3_checkBox.clicked.connect(self._displayNodeDerivativeLabelsD3Clicked)
+        self._display_settings_ui.displayNodeDerivativeLabelsD12_checkBox.clicked.connect(self._displayNodeDerivativeLabelsD12Clicked)
+        self._display_settings_ui.displayNodeDerivativeLabelsD13_checkBox.clicked.connect(self._displayNodeDerivativeLabelsD13Clicked)
+        self._display_settings_ui.displayNodeDerivativeLabelsD23_checkBox.clicked.connect(self._displayNodeDerivativeLabelsD23Clicked)
+        self._display_settings_ui.displayNodeDerivativeLabelsD123_checkBox.clicked.connect(self._displayNodeDerivativeLabelsD123Clicked)
+        self._display_settings_ui.displayNodeDerivatives_checkBox.clicked.connect(self._displayNodeDerivativesClicked)
+        self._display_settings_ui.displayElementAxes_checkBox.clicked.connect(self._displayElementAxesClicked)
+        self._display_settings_ui.displayElementNumbers_checkBox.clicked.connect(self._displayElementNumbersClicked)
+        self._display_settings_ui.displayLines_checkBox.clicked.connect(self._displayLinesClicked)
+        self._display_settings_ui.displayLinesExterior_checkBox.clicked.connect(self._displayLinesExteriorClicked)
+        self._display_settings_ui.displaySurfaces_checkBox.clicked.connect(self._displaySurfacesClicked)
+        self._display_settings_ui.displaySurfacesExterior_checkBox.clicked.connect(self._displaySurfacesExteriorClicked)
+        self._display_settings_ui.displaySurfacesTranslucent_checkBox.clicked.connect(self._displaySurfacesTranslucentClicked)
+        self._display_settings_ui.displaySurfacesWireframe_checkBox.clicked.connect(self._displaySurfacesWireframeClicked)
+        self._display_settings_ui.displayZeroJacobianContours_checkBox.clicked.connect(self._displayZeroJacobianContoursClicked)
         self._setupDisplayGroupWidgets()
 
     def _setupDisplayGroupWidgets(self):
         """
         Set up group display widgets and display values from fitter object.
         """
-        self._ui.displayGroup_fieldChooser.setRegion(self._fitter.getRegion())
-        self._ui.displayGroup_fieldChooser.setNullObjectName("- All -")
-        self._ui.displayGroup_fieldChooser.setConditional(field_is_managed_group)
+        self._display_settings_ui.displayGroup_fieldChooser.setRegion(self._fitter.getRegion())
+        self._display_settings_ui.displayGroup_fieldChooser.setNullObjectName("- All -")
+        self._display_settings_ui.displayGroup_fieldChooser.setConditional(field_is_managed_group)
         displayGroupField = self._model.getGraphicsDisplaySubgroupField()
         if displayGroupField:
-            self._ui.displayGroup_fieldChooser.setField(displayGroupField)
+            self._display_settings_ui.displayGroup_fieldChooser.setField(displayGroupField)
 
     def _updateDisplayWidgets(self):
         """
         Update display widgets to display settings for model graphics display.
         """
-        self._ui.displayAxes_checkBox.setChecked(self._model.isDisplayAxes())
-        self._ui.displayGroup_fieldChooser.currentIndexChanged.connect(self._displayGroupChanged)
-        self._ui.displayMarkerDataPoints_checkBox.setChecked(self._model.isDisplayMarkerDataPoints())
-        self._ui.displayMarkerDataNames_checkBox.setChecked(self._model.isDisplayMarkerDataNames())
-        self._ui.displayMarkerDataProjections_checkBox.setChecked(self._model.isDisplayMarkerDataProjections())
-        self._ui.displayMarkerPoints_checkBox.setChecked(self._model.isDisplayMarkerPoints())
-        self._ui.displayMarkerNames_checkBox.setChecked(self._model.isDisplayMarkerNames())
-        self._ui.displayDataPoints_checkBox.setChecked(self._model.isDisplayDataPoints())
-        self._ui.displayDataProjections_checkBox.setChecked(self._model.isDisplayDataProjections())
-        self._ui.displayDataProjectionPoints_checkBox.setChecked(self._model.isDisplayDataProjectionPoints())
-        self._ui.displayNodePoints_checkBox.setChecked(self._model.isDisplayNodePoints())
-        self._ui.displayNodeNumbers_checkBox.setChecked(self._model.isDisplayNodeNumbers())
-        self._ui.displayNodeDerivativeLabelsD1_checkBox.setChecked(self._model.isDisplayNodeDerivativeLabels("D1"))
-        self._ui.displayNodeDerivativeLabelsD2_checkBox.setChecked(self._model.isDisplayNodeDerivativeLabels("D2"))
-        self._ui.displayNodeDerivativeLabelsD3_checkBox.setChecked(self._model.isDisplayNodeDerivativeLabels("D3"))
-        self._ui.displayNodeDerivativeLabelsD12_checkBox.setChecked(self._model.isDisplayNodeDerivativeLabels("D12"))
-        self._ui.displayNodeDerivativeLabelsD13_checkBox.setChecked(self._model.isDisplayNodeDerivativeLabels("D13"))
-        self._ui.displayNodeDerivativeLabelsD23_checkBox.setChecked(self._model.isDisplayNodeDerivativeLabels("D23"))
-        self._ui.displayNodeDerivativeLabelsD123_checkBox.setChecked(self._model.isDisplayNodeDerivativeLabels("D123"))
-        self._ui.displayNodeDerivatives_checkBox.setChecked(self._model.isDisplayNodeDerivatives())
-        self._ui.displayElementNumbers_checkBox.setChecked(self._model.isDisplayElementNumbers())
-        self._ui.displayElementAxes_checkBox.setChecked(self._model.isDisplayElementAxes())
-        self._ui.displayLines_checkBox.setChecked(self._model.isDisplayLines())
-        self._ui.displayLinesExterior_checkBox.setChecked(self._model.isDisplayLinesExterior())
-        self._ui.displaySurfaces_checkBox.setChecked(self._model.isDisplaySurfaces())
-        self._ui.displaySurfacesExterior_checkBox.setChecked(self._model.isDisplaySurfacesExterior())
-        self._ui.displaySurfacesTranslucent_checkBox.setChecked(self._model.isDisplaySurfacesTranslucent())
-        self._ui.displaySurfacesWireframe_checkBox.setChecked(self._model.isDisplaySurfacesWireframe())
-        self._ui.displayZeroJacobianContours_checkBox.setChecked(self._model.isDisplayZeroJacobianContours())
+        self._display_settings_ui.displayAxes_checkBox.setChecked(self._model.isDisplayAxes())
+        self._display_settings_ui.displayGroup_fieldChooser.currentIndexChanged.connect(self._displayGroupChanged)
+        self._display_settings_ui.displayDataMarkerPoints_checkBox.setChecked(self._model.isDisplayMarkerDataPoints())
+        self._display_settings_ui.displayDataMarkerNames_checkBox.setChecked(self._model.isDisplayMarkerDataNames())
+        self._display_settings_ui.displayMarkerDataProjections_checkBox.setChecked(self._model.isDisplayMarkerDataProjections())
+        self._display_settings_ui.displayMarkerPoints_checkBox.setChecked(self._model.isDisplayMarkerPoints())
+        self._display_settings_ui.displayMarkerNames_checkBox.setChecked(self._model.isDisplayMarkerNames())
+        self._display_settings_ui.displayDataPoints_checkBox.setChecked(self._model.isDisplayDataPoints())
+        self._display_settings_ui.displayDataProjections_checkBox.setChecked(self._model.isDisplayDataProjections())
+        self._display_settings_ui.displayDataProjectionPoints_checkBox.setChecked(self._model.isDisplayDataProjectionPoints())
+        self._display_settings_ui.displayNodePoints_checkBox.setChecked(self._model.isDisplayNodePoints())
+        self._display_settings_ui.displayNodeNumbers_checkBox.setChecked(self._model.isDisplayNodeNumbers())
+        self._display_settings_ui.displayNodeDerivativeLabelsD1_checkBox.setChecked(self._model.isDisplayNodeDerivativeLabels("D1"))
+        self._display_settings_ui.displayNodeDerivativeLabelsD2_checkBox.setChecked(self._model.isDisplayNodeDerivativeLabels("D2"))
+        self._display_settings_ui.displayNodeDerivativeLabelsD3_checkBox.setChecked(self._model.isDisplayNodeDerivativeLabels("D3"))
+        self._display_settings_ui.displayNodeDerivativeLabelsD12_checkBox.setChecked(self._model.isDisplayNodeDerivativeLabels("D12"))
+        self._display_settings_ui.displayNodeDerivativeLabelsD13_checkBox.setChecked(self._model.isDisplayNodeDerivativeLabels("D13"))
+        self._display_settings_ui.displayNodeDerivativeLabelsD23_checkBox.setChecked(self._model.isDisplayNodeDerivativeLabels("D23"))
+        self._display_settings_ui.displayNodeDerivativeLabelsD123_checkBox.setChecked(self._model.isDisplayNodeDerivativeLabels("D123"))
+        self._display_settings_ui.displayNodeDerivatives_checkBox.setChecked(self._model.isDisplayNodeDerivatives())
+        self._display_settings_ui.displayElementNumbers_checkBox.setChecked(self._model.isDisplayElementNumbers())
+        self._display_settings_ui.displayElementAxes_checkBox.setChecked(self._model.isDisplayElementAxes())
+        self._display_settings_ui.displayLines_checkBox.setChecked(self._model.isDisplayLines())
+        self._display_settings_ui.displayLinesExterior_checkBox.setChecked(self._model.isDisplayLinesExterior())
+        self._display_settings_ui.displaySurfaces_checkBox.setChecked(self._model.isDisplaySurfaces())
+        self._display_settings_ui.displaySurfacesExterior_checkBox.setChecked(self._model.isDisplaySurfacesExterior())
+        self._display_settings_ui.displaySurfacesTranslucent_checkBox.setChecked(self._model.isDisplaySurfacesTranslucent())
+        self._display_settings_ui.displaySurfacesWireframe_checkBox.setChecked(self._model.isDisplaySurfacesWireframe())
+        self._display_settings_ui.displayZeroJacobianContours_checkBox.setChecked(self._model.isDisplayZeroJacobianContours())
         self._displayErrors()
 
     def _displayErrors(self):
         rmsError, maxError = self._fitter.getDataRMSAndMaximumProjectionError()
         element_id, value = self._fitter.getLowestElementJacobian()
         rms_error_text = "-" if rmsError is None else f"{rmsError}"
-        self._ui.displayRMSError_lineEdit.setText(rms_error_text)
-        self._ui.displayRMSError_lineEdit.setCursorPosition(0)
+        self._error_statistics_ui.displayRMSError_lineEdit.setText(rms_error_text)
+        self._error_statistics_ui.displayRMSError_lineEdit.setCursorPosition(0)
         max_error_text = "-" if maxError is None else f"{maxError}"
-        self._ui.displayMaxError_lineEdit.setText(max_error_text)
-        self._ui.displayMaxError_lineEdit.setCursorPosition(0)
+        self._error_statistics_ui.displayMaxError_lineEdit.setText(max_error_text)
+        self._error_statistics_ui.displayMaxError_lineEdit.setCursorPosition(0)
         minimum_jacobian_determinant = "-" if value is None else f"{value:.8g}"
-        self._ui.displayMinimumJacobianDeterminant_lineEdit.setText(minimum_jacobian_determinant)
-        self._ui.displayMinimumJacobianDeterminant_lineEdit.setCursorPosition(0)
+        self._error_statistics_ui.displayMinimumJacobianDeterminant_lineEdit.setText(minimum_jacobian_determinant)
+        self._error_statistics_ui.displayMinimumJacobianDeterminant_lineEdit.setCursorPosition(0)
         logger.info(f"RMS Error: {rms_error_text}, Max. Error: {max_error_text}, Min. Jacobian Det.: {minimum_jacobian_determinant}")
 
     def _displayGroupChanged(self, index):
         """
         Callback for change in display group field chooser widget.
         """
-        displayGroupField = self._ui.displayGroup_fieldChooser.getField()
+        displayGroupField = self._display_settings_ui.displayGroup_fieldChooser.getField()
         self._model.setGraphicsDisplaySubgroupField(displayGroupField)
 
     def _displayAxesClicked(self):
-        self._model.setDisplayAxes(self._ui.displayAxes_checkBox.isChecked())
+        self._model.setDisplayAxes(self._display_settings_ui.displayAxes_checkBox.isChecked())
 
     def _displayMarkerDataPointsClicked(self):
-        self._model.setDisplayMarkerDataPoints(self._ui.displayMarkerDataPoints_checkBox.isChecked())
+        self._model.setDisplayMarkerDataPoints(self._display_settings_ui.displayDataMarkerPoints_checkBox.isChecked())
 
     def _displayMarkerDataNamesClicked(self):
-        self._model.setDisplayMarkerDataNames(self._ui.displayMarkerDataNames_checkBox.isChecked())
+        self._model.setDisplayMarkerDataNames(self._display_settings_ui.displayDataMarkerNames_checkBox.isChecked())
 
     def _displayMarkerDataProjectionsClicked(self):
-        self._model.setDisplayMarkerDataProjections(self._ui.displayMarkerDataProjections_checkBox.isChecked())
+        self._model.setDisplayMarkerDataProjections(self._display_settings_ui.displayMarkerDataProjections_checkBox.isChecked())
 
     def _displayMarkerPointsClicked(self):
-        self._model.setDisplayMarkerPoints(self._ui.displayMarkerPoints_checkBox.isChecked())
+        self._model.setDisplayMarkerPoints(self._display_settings_ui.displayMarkerPoints_checkBox.isChecked())
 
     def _displayMarkerNamesClicked(self):
-        self._model.setDisplayMarkerNames(self._ui.displayMarkerNames_checkBox.isChecked())
+        self._model.setDisplayMarkerNames(self._display_settings_ui.displayMarkerNames_checkBox.isChecked())
 
     def _displayDataPointsClicked(self):
-        self._model.setDisplayDataPoints(self._ui.displayDataPoints_checkBox.isChecked())
+        self._model.setDisplayDataPoints(self._display_settings_ui.displayDataPoints_checkBox.isChecked())
 
     def _displayDataProjectionsClicked(self):
-        self._model.setDisplayDataProjections(self._ui.displayDataProjections_checkBox.isChecked())
+        self._model.setDisplayDataProjections(self._display_settings_ui.displayDataProjections_checkBox.isChecked())
 
     def _displayDataProjectionPointsClicked(self):
-        self._model.setDisplayDataProjectionPoints(self._ui.displayDataProjectionPoints_checkBox.isChecked())
+        self._model.setDisplayDataProjectionPoints(self._display_settings_ui.displayDataProjectionPoints_checkBox.isChecked())
 
     def _displayNodePointsClicked(self):
-        self._model.setDisplayNodePoints(self._ui.displayNodePoints_checkBox.isChecked())
+        self._model.setDisplayNodePoints(self._display_settings_ui.displayNodePoints_checkBox.isChecked())
 
     def _displayNodeNumbersClicked(self):
-        self._model.setDisplayNodeNumbers(self._ui.displayNodeNumbers_checkBox.isChecked())
+        self._model.setDisplayNodeNumbers(self._display_settings_ui.displayNodeNumbers_checkBox.isChecked())
 
     def _displayNodeDerivativesClicked(self):
-        self._model.setDisplayNodeDerivatives(self._ui.displayNodeDerivatives_checkBox.isChecked())
+        self._model.setDisplayNodeDerivatives(self._display_settings_ui.displayNodeDerivatives_checkBox.isChecked())
 
     def _displayNodeDerivativeLabelsD1Clicked(self):
-        self._model.setDisplayNodeDerivativeLabels("D1", self._ui.displayNodeDerivativeLabelsD1_checkBox.isChecked())
+        self._model.setDisplayNodeDerivativeLabels("D1", self._display_settings_ui.displayNodeDerivativeLabelsD1_checkBox.isChecked())
 
     def _displayNodeDerivativeLabelsD2Clicked(self):
-        self._model.setDisplayNodeDerivativeLabels("D2", self._ui.displayNodeDerivativeLabelsD2_checkBox.isChecked())
+        self._model.setDisplayNodeDerivativeLabels("D2", self._display_settings_ui.displayNodeDerivativeLabelsD2_checkBox.isChecked())
 
     def _displayNodeDerivativeLabelsD3Clicked(self):
-        self._model.setDisplayNodeDerivativeLabels("D3", self._ui.displayNodeDerivativeLabelsD3_checkBox.isChecked())
+        self._model.setDisplayNodeDerivativeLabels("D3", self._display_settings_ui.displayNodeDerivativeLabelsD3_checkBox.isChecked())
 
     def _displayNodeDerivativeLabelsD12Clicked(self):
-        self._model.setDisplayNodeDerivativeLabels("D12", self._ui.displayNodeDerivativeLabelsD12_checkBox.isChecked())
+        self._model.setDisplayNodeDerivativeLabels("D12", self._display_settings_ui.displayNodeDerivativeLabelsD12_checkBox.isChecked())
 
     def _displayNodeDerivativeLabelsD13Clicked(self):
-        self._model.setDisplayNodeDerivativeLabels("D13", self._ui.displayNodeDerivativeLabelsD13_checkBox.isChecked())
+        self._model.setDisplayNodeDerivativeLabels("D13", self._display_settings_ui.displayNodeDerivativeLabelsD13_checkBox.isChecked())
 
     def _displayNodeDerivativeLabelsD23Clicked(self):
-        self._model.setDisplayNodeDerivativeLabels("D23", self._ui.displayNodeDerivativeLabelsD23_checkBox.isChecked())
+        self._model.setDisplayNodeDerivativeLabels("D23", self._display_settings_ui.displayNodeDerivativeLabelsD23_checkBox.isChecked())
 
     def _displayNodeDerivativeLabelsD123Clicked(self):
-        self._model.setDisplayNodeDerivativeLabels("D123", self._ui.displayNodeDerivativeLabelsD123_checkBox.isChecked())
+        self._model.setDisplayNodeDerivativeLabels("D123", self._display_settings_ui.displayNodeDerivativeLabelsD123_checkBox.isChecked())
 
     def _displayElementAxesClicked(self):
-        self._model.setDisplayElementAxes(self._ui.displayElementAxes_checkBox.isChecked())
+        self._model.setDisplayElementAxes(self._display_settings_ui.displayElementAxes_checkBox.isChecked())
 
     def _displayElementNumbersClicked(self):
-        self._model.setDisplayElementNumbers(self._ui.displayElementNumbers_checkBox.isChecked())
+        self._model.setDisplayElementNumbers(self._display_settings_ui.displayElementNumbers_checkBox.isChecked())
 
     def _displayLinesClicked(self):
-        self._model.setDisplayLines(self._ui.displayLines_checkBox.isChecked())
+        self._model.setDisplayLines(self._display_settings_ui.displayLines_checkBox.isChecked())
         self._autoPerturbLines()
 
     def _displayLinesExteriorClicked(self):
-        self._model.setDisplayLinesExterior(self._ui.displayLinesExterior_checkBox.isChecked())
+        self._model.setDisplayLinesExterior(self._display_settings_ui.displayLinesExterior_checkBox.isChecked())
 
     def _displaySurfacesClicked(self):
-        self._model.setDisplaySurfaces(self._ui.displaySurfaces_checkBox.isChecked())
+        self._model.setDisplaySurfaces(self._display_settings_ui.displaySurfaces_checkBox.isChecked())
         self._autoPerturbLines()
 
     def _displaySurfacesExteriorClicked(self):
-        self._model.setDisplaySurfacesExterior(self._ui.displaySurfacesExterior_checkBox.isChecked())
+        self._model.setDisplaySurfacesExterior(self._display_settings_ui.displaySurfacesExterior_checkBox.isChecked())
 
     def _displaySurfacesTranslucentClicked(self):
-        self._model.setDisplaySurfacesTranslucent(self._ui.displaySurfacesTranslucent_checkBox.isChecked())
+        self._model.setDisplaySurfacesTranslucent(self._display_settings_ui.displaySurfacesTranslucent_checkBox.isChecked())
         self._autoPerturbLines()
 
     def _displaySurfacesWireframeClicked(self):
-        self._model.setDisplaySurfacesWireframe(self._ui.displaySurfacesWireframe_checkBox.isChecked())
+        self._model.setDisplaySurfacesWireframe(self._display_settings_ui.displaySurfacesWireframe_checkBox.isChecked())
 
     def _displayZeroJacobianContoursClicked(self):
-        self._model.setDisplayZeroJacobianContours(self._ui.displayZeroJacobianContours_checkBox.isChecked())
+        self._model.setDisplayZeroJacobianContours(self._display_settings_ui.displayZeroJacobianContours_checkBox.isChecked())
 
     # === group setting widgets ===
 
@@ -531,35 +578,35 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         """
         Set up group setting widgets and display values from fitter object.
         """
-        self._ui.groupSettings_widget.groupSettings_fieldChooser.setRegion(self._fitter.getRegion())
-        self._ui.groupSettings_widget.groupSettings_fieldChooser.setNullObjectName("- Default -")
-        self._ui.groupSettings_widget.groupSettings_fieldChooser.setConditional(field_is_managed_group)
-        self._ui.groupSettings_widget.groupSettings_fieldChooser.setField(Field())
-        self._ui.groupSettings_widget.groupConfigProjectionSubgroup_fieldChooser.setRegion(self._fitter.getRegion())
-        self._ui.groupSettings_widget.groupConfigProjectionSubgroup_fieldChooser.setNullObjectName("-")
-        self._ui.groupSettings_widget.groupConfigProjectionSubgroup_fieldChooser.setConditional(field_is_managed_group)
-        self._ui.groupSettings_widget.groupConfigProjectionSubgroup_fieldChooser.setField(Field())
+        self._steps_ui.groupSettings_widget.groupSettings_fieldChooser.setRegion(self._fitter.getRegion())
+        self._steps_ui.groupSettings_widget.groupSettings_fieldChooser.setNullObjectName("- Default -")
+        self._steps_ui.groupSettings_widget.groupSettings_fieldChooser.setConditional(field_is_managed_group)
+        self._steps_ui.groupSettings_widget.groupSettings_fieldChooser.setField(Field())
+        self._steps_ui.groupSettings_widget.groupConfigProjectionSubgroup_fieldChooser.setRegion(self._fitter.getRegion())
+        self._steps_ui.groupSettings_widget.groupConfigProjectionSubgroup_fieldChooser.setNullObjectName("-")
+        self._steps_ui.groupSettings_widget.groupConfigProjectionSubgroup_fieldChooser.setConditional(field_is_managed_group)
+        self._steps_ui.groupSettings_widget.groupConfigProjectionSubgroup_fieldChooser.setField(Field())
 
     def _makeConnectionsGroup(self):
-        self._ui.groupSettings_widget.groupSettings_fieldChooser.currentIndexChanged.connect(self._groupSettingsGroupChanged)
-        self._ui.groupSettings_widget.groupConfigCentralProjection_checkBox.clicked.connect(self._groupConfigCentralProjectionClicked)
-        self._ui.groupSettings_widget.groupConfigCentralProjectionSet_checkBox.clicked.connect(self._groupConfigCentralProjectionSetClicked)
-        self._ui.groupSettings_widget.groupConfigDataProportion_checkBox.clicked.connect(self._groupConfigDataProportionClicked)
-        self._ui.groupSettings_widget.groupConfigDataProportion_lineEdit.editingFinished.connect(self._groupConfigDataProportionEntered)
-        self._ui.groupSettings_widget.groupConfigOutlierLength_checkBox.clicked.connect(self._groupConfigOutlierLengthClicked)
-        self._ui.groupSettings_widget.groupConfigOutlierLength_lineEdit.editingFinished.connect(self._groupConfigOutlierLengthEntered)
-        self._ui.groupSettings_widget.groupConfigProjectionSubgroup_checkBox.clicked.connect(self._groupConfigProjectionSubgroupClicked)
-        self._ui.groupSettings_widget.groupConfigProjectionSubgroup_fieldChooser.currentIndexChanged.connect(self._groupConfigProjectionSubgroupFieldChanged)
-        self._ui.groupSettings_widget.groupFitDataWeight_checkBox.clicked.connect(self._groupFitDataWeightClicked)
-        self._ui.groupSettings_widget.groupFitDataWeight_lineEdit.editingFinished.connect(self._groupFitDataWeightEntered)
-        self._ui.groupSettings_widget.groupFitDataSlidingFactor_checkBox.clicked.connect(self._groupFitDataSlidingFactorClicked)
-        self._ui.groupSettings_widget.groupFitDataSlidingFactor_lineEdit.editingFinished.connect(self._groupFitDataSlidingFactorEntered)
-        self._ui.groupSettings_widget.groupFitDataStretch_checkBox.clicked.connect(self._groupFitDataStretchClicked)
-        self._ui.groupSettings_widget.groupFitDataStretchSet_checkBox.clicked.connect(self._groupFitDataStretchSetClicked)
-        self._ui.groupSettings_widget.groupFitStrainPenalty_checkBox.clicked.connect(self._groupFitStrainPenaltyClicked)
-        self._ui.groupSettings_widget.groupFitStrainPenalty_lineEdit.editingFinished.connect(self._groupFitStrainPenaltyEntered)
-        self._ui.groupSettings_widget.groupFitCurvaturePenalty_checkBox.clicked.connect(self._groupFitCurvaturePenaltyClicked)
-        self._ui.groupSettings_widget.groupFitCurvaturePenalty_lineEdit.editingFinished.connect(self._groupFitCurvaturePenaltyEntered)
+        self._steps_ui.groupSettings_widget.groupSettings_fieldChooser.currentIndexChanged.connect(self._groupSettingsGroupChanged)
+        self._steps_ui.groupSettings_widget.groupConfigCentralProjection_checkBox.clicked.connect(self._groupConfigCentralProjectionClicked)
+        self._steps_ui.groupSettings_widget.groupConfigCentralProjectionSet_checkBox.clicked.connect(self._groupConfigCentralProjectionSetClicked)
+        self._steps_ui.groupSettings_widget.groupConfigDataProportion_checkBox.clicked.connect(self._groupConfigDataProportionClicked)
+        self._steps_ui.groupSettings_widget.groupConfigDataProportion_lineEdit.editingFinished.connect(self._groupConfigDataProportionEntered)
+        self._steps_ui.groupSettings_widget.groupConfigOutlierLength_checkBox.clicked.connect(self._groupConfigOutlierLengthClicked)
+        self._steps_ui.groupSettings_widget.groupConfigOutlierLength_lineEdit.editingFinished.connect(self._groupConfigOutlierLengthEntered)
+        self._steps_ui.groupSettings_widget.groupConfigProjectionSubgroup_checkBox.clicked.connect(self._groupConfigProjectionSubgroupClicked)
+        self._steps_ui.groupSettings_widget.groupConfigProjectionSubgroup_fieldChooser.currentIndexChanged.connect(self._groupConfigProjectionSubgroupFieldChanged)
+        self._steps_ui.groupSettings_widget.groupFitDataWeight_checkBox.clicked.connect(self._groupFitDataWeightClicked)
+        self._steps_ui.groupSettings_widget.groupFitDataWeight_lineEdit.editingFinished.connect(self._groupFitDataWeightEntered)
+        self._steps_ui.groupSettings_widget.groupFitDataSlidingFactor_checkBox.clicked.connect(self._groupFitDataSlidingFactorClicked)
+        self._steps_ui.groupSettings_widget.groupFitDataSlidingFactor_lineEdit.editingFinished.connect(self._groupFitDataSlidingFactorEntered)
+        self._steps_ui.groupSettings_widget.groupFitDataStretch_checkBox.clicked.connect(self._groupFitDataStretchClicked)
+        self._steps_ui.groupSettings_widget.groupFitDataStretchSet_checkBox.clicked.connect(self._groupFitDataStretchSetClicked)
+        self._steps_ui.groupSettings_widget.groupFitStrainPenalty_checkBox.clicked.connect(self._groupFitStrainPenaltyClicked)
+        self._steps_ui.groupSettings_widget.groupFitStrainPenalty_lineEdit.editingFinished.connect(self._groupFitStrainPenaltyEntered)
+        self._steps_ui.groupSettings_widget.groupFitCurvaturePenalty_checkBox.clicked.connect(self._groupFitCurvaturePenaltyClicked)
+        self._steps_ui.groupSettings_widget.groupFitCurvaturePenalty_lineEdit.editingFinished.connect(self._groupFitCurvaturePenaltyEntered)
 
     def _updateGroupSettingWidgets(self):
         """
@@ -579,24 +626,24 @@ class GeometryFitterWidget(QtWidgets.QWidget):
             self._updateGroupFitDataStretch()
             self._updateGroupFitStrainPenalty()
             self._updateGroupFitCurvaturePenalty()
-        self._ui.groupSettings_widget.groupConfigCentralProjection_checkBox.setVisible(isConfig)
-        self._ui.groupSettings_widget.groupConfigCentralProjectionSet_checkBox.setVisible(isConfig)
-        self._ui.groupSettings_widget.groupConfigDataProportion_checkBox.setVisible(isConfig)
-        self._ui.groupSettings_widget.groupConfigDataProportion_lineEdit.setVisible(isConfig)
-        self._ui.groupSettings_widget.groupConfigOutlierLength_checkBox.setVisible(isConfig)
-        self._ui.groupSettings_widget.groupConfigOutlierLength_lineEdit.setVisible(isConfig)
-        self._ui.groupSettings_widget.groupConfigProjectionSubgroup_checkBox.setVisible(isConfig)
-        self._ui.groupSettings_widget.groupConfigProjectionSubgroup_fieldChooser.setVisible(isConfig)
-        self._ui.groupSettings_widget.groupFitDataWeight_checkBox.setVisible(isFit)
-        self._ui.groupSettings_widget.groupFitDataWeight_lineEdit.setVisible(isFit)
-        self._ui.groupSettings_widget.groupFitDataSlidingFactor_checkBox.setVisible(isFit)
-        self._ui.groupSettings_widget.groupFitDataSlidingFactor_lineEdit.setVisible(isFit)
-        self._ui.groupSettings_widget.groupFitDataStretch_checkBox.setVisible(isFit)
-        self._ui.groupSettings_widget.groupFitDataStretchSet_checkBox.setVisible(isFit)
-        self._ui.groupSettings_widget.groupFitStrainPenalty_checkBox.setVisible(isFit)
-        self._ui.groupSettings_widget.groupFitStrainPenalty_lineEdit.setVisible(isFit)
-        self._ui.groupSettings_widget.groupFitCurvaturePenalty_checkBox.setVisible(isFit)
-        self._ui.groupSettings_widget.groupFitCurvaturePenalty_lineEdit.setVisible(isFit)
+        self._steps_ui.groupSettings_widget.groupConfigCentralProjection_checkBox.setVisible(isConfig)
+        self._steps_ui.groupSettings_widget.groupConfigCentralProjectionSet_checkBox.setVisible(isConfig)
+        self._steps_ui.groupSettings_widget.groupConfigDataProportion_checkBox.setVisible(isConfig)
+        self._steps_ui.groupSettings_widget.groupConfigDataProportion_lineEdit.setVisible(isConfig)
+        self._steps_ui.groupSettings_widget.groupConfigOutlierLength_checkBox.setVisible(isConfig)
+        self._steps_ui.groupSettings_widget.groupConfigOutlierLength_lineEdit.setVisible(isConfig)
+        self._steps_ui.groupSettings_widget.groupConfigProjectionSubgroup_checkBox.setVisible(isConfig)
+        self._steps_ui.groupSettings_widget.groupConfigProjectionSubgroup_fieldChooser.setVisible(isConfig)
+        self._steps_ui.groupSettings_widget.groupFitDataWeight_checkBox.setVisible(isFit)
+        self._steps_ui.groupSettings_widget.groupFitDataWeight_lineEdit.setVisible(isFit)
+        self._steps_ui.groupSettings_widget.groupFitDataSlidingFactor_checkBox.setVisible(isFit)
+        self._steps_ui.groupSettings_widget.groupFitDataSlidingFactor_lineEdit.setVisible(isFit)
+        self._steps_ui.groupSettings_widget.groupFitDataStretch_checkBox.setVisible(isFit)
+        self._steps_ui.groupSettings_widget.groupFitDataStretchSet_checkBox.setVisible(isFit)
+        self._steps_ui.groupSettings_widget.groupFitStrainPenalty_checkBox.setVisible(isFit)
+        self._steps_ui.groupSettings_widget.groupFitStrainPenalty_lineEdit.setVisible(isFit)
+        self._steps_ui.groupSettings_widget.groupFitCurvaturePenalty_checkBox.setVisible(isFit)
+        self._steps_ui.groupSettings_widget.groupFitCurvaturePenalty_lineEdit.setVisible(isFit)
 
     def _groupSettingsGroupChanged(self, index):
         """
@@ -607,7 +654,7 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         self._updateGroupSettingWidgets()
 
     def _getGroupSettingsGroupName(self):
-        group = self._ui.groupSettings_widget.groupSettings_fieldChooser.getField()
+        group = self._steps_ui.groupSettings_widget.groupSettings_fieldChooser.getField()
         groupName = None
         if group:
             groupName = group.getName()
@@ -640,14 +687,14 @@ class GeometryFitterWidget(QtWidgets.QWidget):
     def _updateGroupConfigCentralProjection(self):
         checkBoxTristate, checkBoxState, lineEditDisable, isConfigCentralProjectionSet = \
             self._getGroupSettingDisplayState(self._getConfig().getGroupCentralProjection)
-        self._ui.groupSettings_widget.groupConfigCentralProjection_checkBox.setTristate(checkBoxTristate)
-        self._ui.groupSettings_widget.groupConfigCentralProjection_checkBox.setCheckState(checkBoxState)
-        self._ui.groupSettings_widget.groupConfigCentralProjectionSet_checkBox.setDisabled(lineEditDisable)
-        self._ui.groupSettings_widget.groupConfigCentralProjectionSet_checkBox.setCheckState(
+        self._steps_ui.groupSettings_widget.groupConfigCentralProjection_checkBox.setTristate(checkBoxTristate)
+        self._steps_ui.groupSettings_widget.groupConfigCentralProjection_checkBox.setCheckState(checkBoxState)
+        self._steps_ui.groupSettings_widget.groupConfigCentralProjectionSet_checkBox.setDisabled(lineEditDisable)
+        self._steps_ui.groupSettings_widget.groupConfigCentralProjectionSet_checkBox.setCheckState(
             QtCore.Qt.CheckState.Checked if isConfigCentralProjectionSet else QtCore.Qt.CheckState.Unchecked)
 
     def _groupConfigCentralProjectionClicked(self):
-        checkState = self._ui.groupSettings_widget.groupConfigCentralProjection_checkBox.checkState()
+        checkState = self._steps_ui.groupSettings_widget.groupConfigCentralProjection_checkBox.checkState()
         groupName = self._getGroupSettingsGroupName()
         if checkState == QtCore.Qt.CheckState.Unchecked:
             self._getConfig().setGroupCentralProjection(groupName, None)
@@ -658,7 +705,7 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         self._updateGroupConfigCentralProjection()
 
     def _groupConfigCentralProjectionSetClicked(self):
-        state = self._ui.groupSettings_widget.groupConfigCentralProjectionSet_checkBox.checkState()
+        state = self._steps_ui.groupSettings_widget.groupConfigCentralProjectionSet_checkBox.checkState()
         config = self._getConfig()
         groupName = self._getGroupSettingsGroupName()
         if config.setGroupCentralProjection(groupName, state == QtCore.Qt.CheckState.Checked):
@@ -672,13 +719,13 @@ class GeometryFitterWidget(QtWidgets.QWidget):
     def _updateGroupConfigDataProportion(self):
         checkBoxTristate, checkBoxState, lineEditDisable, dataProportionStr = \
             self._getGroupSettingDisplayState(self._getConfig().getGroupDataProportion)
-        self._ui.groupSettings_widget.groupConfigDataProportion_checkBox.setTristate(checkBoxTristate)
-        self._ui.groupSettings_widget.groupConfigDataProportion_checkBox.setCheckState(checkBoxState)
-        self._ui.groupSettings_widget.groupConfigDataProportion_lineEdit.setDisabled(lineEditDisable)
-        self._ui.groupSettings_widget.groupConfigDataProportion_lineEdit.setText(dataProportionStr)
+        self._steps_ui.groupSettings_widget.groupConfigDataProportion_checkBox.setTristate(checkBoxTristate)
+        self._steps_ui.groupSettings_widget.groupConfigDataProportion_checkBox.setCheckState(checkBoxState)
+        self._steps_ui.groupSettings_widget.groupConfigDataProportion_lineEdit.setDisabled(lineEditDisable)
+        self._steps_ui.groupSettings_widget.groupConfigDataProportion_lineEdit.setText(dataProportionStr)
 
     def _groupConfigDataProportionClicked(self):
-        checkState = self._ui.groupSettings_widget.groupConfigDataProportion_checkBox.checkState()
+        checkState = self._steps_ui.groupSettings_widget.groupConfigDataProportion_checkBox.checkState()
         groupName = self._getGroupSettingsGroupName()
         if checkState == QtCore.Qt.CheckState.Unchecked:
             self._getConfig().setGroupDataProportion(groupName, None)
@@ -689,7 +736,7 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         self._updateGroupConfigDataProportion()
 
     def _groupConfigDataProportionEntered(self):
-        value = parse_real_non_negative(self._ui.groupSettings_widget.groupConfigDataProportion_lineEdit)
+        value = parse_real_non_negative(self._steps_ui.groupSettings_widget.groupConfigDataProportion_lineEdit)
         groupName = self._getGroupSettingsGroupName()
         self._getConfig().setGroupDataProportion(groupName, value)
         self._updateGroupConfigDataProportion()
@@ -697,13 +744,13 @@ class GeometryFitterWidget(QtWidgets.QWidget):
     def _updateGroupConfigOutlierLength(self):
         checkBoxTristate, checkBoxState, lineEditDisable, outlierLengthStr = \
             self._getGroupSettingDisplayState(self._getConfig().getGroupOutlierLength)
-        self._ui.groupSettings_widget.groupConfigOutlierLength_checkBox.setTristate(checkBoxTristate)
-        self._ui.groupSettings_widget.groupConfigOutlierLength_checkBox.setCheckState(checkBoxState)
-        self._ui.groupSettings_widget.groupConfigOutlierLength_lineEdit.setDisabled(lineEditDisable)
-        self._ui.groupSettings_widget.groupConfigOutlierLength_lineEdit.setText(outlierLengthStr)
+        self._steps_ui.groupSettings_widget.groupConfigOutlierLength_checkBox.setTristate(checkBoxTristate)
+        self._steps_ui.groupSettings_widget.groupConfigOutlierLength_checkBox.setCheckState(checkBoxState)
+        self._steps_ui.groupSettings_widget.groupConfigOutlierLength_lineEdit.setDisabled(lineEditDisable)
+        self._steps_ui.groupSettings_widget.groupConfigOutlierLength_lineEdit.setText(outlierLengthStr)
 
     def _groupConfigOutlierLengthClicked(self):
-        checkState = self._ui.groupSettings_widget.groupConfigOutlierLength_checkBox.checkState()
+        checkState = self._steps_ui.groupSettings_widget.groupConfigOutlierLength_checkBox.checkState()
         groupName = self._getGroupSettingsGroupName()
         if checkState == QtCore.Qt.CheckState.Unchecked:
             self._getConfig().setGroupOutlierLength(groupName, None)
@@ -714,7 +761,7 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         self._updateGroupConfigOutlierLength()
 
     def _groupConfigOutlierLengthEntered(self):
-        value = parse_real(self._ui.groupSettings_widget.groupConfigOutlierLength_lineEdit)
+        value = parse_real(self._steps_ui.groupSettings_widget.groupConfigOutlierLength_lineEdit)
         groupName = self._getGroupSettingsGroupName()
         self._getConfig().setGroupOutlierLength(groupName, value)
         self._updateGroupConfigOutlierLength()
@@ -722,20 +769,20 @@ class GeometryFitterWidget(QtWidgets.QWidget):
     def _updateGroupConfigProjectionSubgroup(self):
         checkBoxTristate, checkBoxState, fieldchooserDisable, groupFieldOrNone = \
             self._getGroupSettingDisplayState(self._getConfig().getGroupProjectionSubgroup)
-        self._ui.groupSettings_widget.groupConfigProjectionSubgroup_checkBox.setTristate(checkBoxTristate)
-        self._ui.groupSettings_widget.groupConfigProjectionSubgroup_checkBox.setCheckState(checkBoxState)
-        self._ui.groupSettings_widget.groupConfigProjectionSubgroup_fieldChooser.setDisabled(fieldchooserDisable)
-        self._ui.groupSettings_widget.groupConfigProjectionSubgroup_fieldChooser.setField(groupFieldOrNone)
+        self._steps_ui.groupSettings_widget.groupConfigProjectionSubgroup_checkBox.setTristate(checkBoxTristate)
+        self._steps_ui.groupSettings_widget.groupConfigProjectionSubgroup_checkBox.setCheckState(checkBoxState)
+        self._steps_ui.groupSettings_widget.groupConfigProjectionSubgroup_fieldChooser.setDisabled(fieldchooserDisable)
+        self._steps_ui.groupSettings_widget.groupConfigProjectionSubgroup_fieldChooser.setField(groupFieldOrNone)
 
     def _groupConfigProjectionSubgroupClicked(self):
-        checkState = self._ui.groupSettings_widget.groupConfigProjectionSubgroup_checkBox.checkState()
+        checkState = self._steps_ui.groupSettings_widget.groupConfigProjectionSubgroup_checkBox.checkState()
         groupName = self._getGroupSettingsGroupName()
         if checkState == QtCore.Qt.CheckState.Unchecked:
             self._getConfig().setGroupProjectionSubgroup(groupName, None)
         elif checkState == QtCore.Qt.CheckState.PartiallyChecked:
             self._getConfig().clearGroupProjectionSubgroup(groupName)
         else:
-            subgroup = self._ui.groupSettings_widget.groupConfigProjectionSubgroup_fieldChooser.getField()
+            subgroup = self._steps_ui.groupSettings_widget.groupConfigProjectionSubgroup_fieldChooser.getField()
             if not subgroup:
                 # get the first managed group field, if any
                 fielditer = self._fitter.getFieldmodule().createFielditerator()
@@ -752,7 +799,7 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         """
         Callback for change in group config projection subgroup field, to project onto intersected group.
         """
-        field = self._ui.groupSettings_widget.groupConfigProjectionSubgroup_fieldChooser.getField()
+        field = self._steps_ui.groupSettings_widget.groupConfigProjectionSubgroup_fieldChooser.getField()
         groupName = self._getGroupSettingsGroupName()
         self._getConfig().setGroupProjectionSubgroup(groupName, field)
         self._updateGroupConfigProjectionSubgroup()  # in case of None
@@ -760,13 +807,13 @@ class GeometryFitterWidget(QtWidgets.QWidget):
     def _updateGroupFitDataWeight(self):
         checkBoxTristate, checkBoxState, lineEditDisable, dataWeightStr = \
             self._getGroupSettingDisplayState(self._getFit().getGroupDataWeight)
-        self._ui.groupSettings_widget.groupFitDataWeight_checkBox.setTristate(checkBoxTristate)
-        self._ui.groupSettings_widget.groupFitDataWeight_checkBox.setCheckState(checkBoxState)
-        self._ui.groupSettings_widget.groupFitDataWeight_lineEdit.setDisabled(lineEditDisable)
-        self._ui.groupSettings_widget.groupFitDataWeight_lineEdit.setText(dataWeightStr)
+        self._steps_ui.groupSettings_widget.groupFitDataWeight_checkBox.setTristate(checkBoxTristate)
+        self._steps_ui.groupSettings_widget.groupFitDataWeight_checkBox.setCheckState(checkBoxState)
+        self._steps_ui.groupSettings_widget.groupFitDataWeight_lineEdit.setDisabled(lineEditDisable)
+        self._steps_ui.groupSettings_widget.groupFitDataWeight_lineEdit.setText(dataWeightStr)
 
     def _groupFitDataWeightClicked(self):
-        checkState = self._ui.groupSettings_widget.groupFitDataWeight_checkBox.checkState()
+        checkState = self._steps_ui.groupSettings_widget.groupFitDataWeight_checkBox.checkState()
         groupName = self._getGroupSettingsGroupName()
         if checkState == QtCore.Qt.CheckState.Unchecked:
             self._getFit().setGroupDataWeight(groupName, None)
@@ -777,7 +824,7 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         self._updateGroupFitDataWeight()
 
     def _groupFitDataWeightEntered(self):
-        value = parse_real_non_negative(self._ui.groupSettings_widget.groupFitDataWeight_lineEdit)
+        value = parse_real_non_negative(self._steps_ui.groupSettings_widget.groupFitDataWeight_lineEdit)
         groupName = self._getGroupSettingsGroupName()
         self._getFit().setGroupDataWeight(groupName, value)
         self._updateGroupFitDataWeight()
@@ -785,13 +832,13 @@ class GeometryFitterWidget(QtWidgets.QWidget):
     def _updateGroupFitDataSlidingFactor(self):
         checkBoxTristate, checkBoxState, lineEditDisable, dataSlidingFactorStr = \
             self._getGroupSettingDisplayState(self._getFit().getGroupDataSlidingFactor)
-        self._ui.groupSettings_widget.groupFitDataSlidingFactor_checkBox.setTristate(checkBoxTristate)
-        self._ui.groupSettings_widget.groupFitDataSlidingFactor_checkBox.setCheckState(checkBoxState)
-        self._ui.groupSettings_widget.groupFitDataSlidingFactor_lineEdit.setDisabled(lineEditDisable)
-        self._ui.groupSettings_widget.groupFitDataSlidingFactor_lineEdit.setText(dataSlidingFactorStr)
+        self._steps_ui.groupSettings_widget.groupFitDataSlidingFactor_checkBox.setTristate(checkBoxTristate)
+        self._steps_ui.groupSettings_widget.groupFitDataSlidingFactor_checkBox.setCheckState(checkBoxState)
+        self._steps_ui.groupSettings_widget.groupFitDataSlidingFactor_lineEdit.setDisabled(lineEditDisable)
+        self._steps_ui.groupSettings_widget.groupFitDataSlidingFactor_lineEdit.setText(dataSlidingFactorStr)
 
     def _groupFitDataSlidingFactorClicked(self):
-        checkState = self._ui.groupSettings_widget.groupFitDataSlidingFactor_checkBox.checkState()
+        checkState = self._steps_ui.groupSettings_widget.groupFitDataSlidingFactor_checkBox.checkState()
         groupName = self._getGroupSettingsGroupName()
         if checkState == QtCore.Qt.CheckState.Unchecked:
             self._getFit().setGroupDataSlidingFactor(groupName, None)
@@ -802,7 +849,7 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         self._updateGroupFitDataSlidingFactor()
 
     def _groupFitDataSlidingFactorEntered(self):
-        value = parse_real_non_negative(self._ui.groupSettings_widget.groupFitDataSlidingFactor_lineEdit)
+        value = parse_real_non_negative(self._steps_ui.groupSettings_widget.groupFitDataSlidingFactor_lineEdit)
         groupName = self._getGroupSettingsGroupName()
         self._getFit().setGroupDataSlidingFactor(groupName, value)
         self._updateGroupFitDataSlidingFactor()
@@ -810,14 +857,14 @@ class GeometryFitterWidget(QtWidgets.QWidget):
     def _updateGroupFitDataStretch(self):
         checkBoxTristate, checkBoxState, lineEditDisable, isFitDataStretchSet = \
             self._getGroupSettingDisplayState(self._getFit().getGroupDataStretch)
-        self._ui.groupSettings_widget.groupFitDataStretch_checkBox.setTristate(checkBoxTristate)
-        self._ui.groupSettings_widget.groupFitDataStretch_checkBox.setCheckState(checkBoxState)
-        self._ui.groupSettings_widget.groupFitDataStretchSet_checkBox.setDisabled(lineEditDisable)
-        self._ui.groupSettings_widget.groupFitDataStretchSet_checkBox.setCheckState(
+        self._steps_ui.groupSettings_widget.groupFitDataStretch_checkBox.setTristate(checkBoxTristate)
+        self._steps_ui.groupSettings_widget.groupFitDataStretch_checkBox.setCheckState(checkBoxState)
+        self._steps_ui.groupSettings_widget.groupFitDataStretchSet_checkBox.setDisabled(lineEditDisable)
+        self._steps_ui.groupSettings_widget.groupFitDataStretchSet_checkBox.setCheckState(
             QtCore.Qt.CheckState.Checked if isFitDataStretchSet else QtCore.Qt.CheckState.Unchecked)
 
     def _groupFitDataStretchClicked(self):
-        checkState = self._ui.groupSettings_widget.groupFitDataStretch_checkBox.checkState()
+        checkState = self._steps_ui.groupSettings_widget.groupFitDataStretch_checkBox.checkState()
         groupName = self._getGroupSettingsGroupName()
         if checkState == QtCore.Qt.CheckState.Unchecked:
             self._getFit().setGroupDataStretch(groupName, None)
@@ -828,20 +875,20 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         self._updateGroupFitDataStretch()
 
     def _groupFitDataStretchSetClicked(self):
-        state = self._ui.groupSettings_widget.groupFitDataStretchSet_checkBox.checkState()
+        state = self._steps_ui.groupSettings_widget.groupFitDataStretchSet_checkBox.checkState()
         groupName = self._getGroupSettingsGroupName()
         self._getFit().setGroupDataStretch(groupName, state == QtCore.Qt.CheckState.Checked)
 
     def _updateGroupFitStrainPenalty(self):
         checkBoxTristate, checkBoxState, lineEditDisable, dataStr = \
             self._getGroupSettingDisplayState(self._getFit().getGroupStrainPenalty)
-        self._ui.groupSettings_widget.groupFitStrainPenalty_checkBox.setTristate(checkBoxTristate)
-        self._ui.groupSettings_widget.groupFitStrainPenalty_checkBox.setCheckState(checkBoxState)
-        self._ui.groupSettings_widget.groupFitStrainPenalty_lineEdit.setDisabled(lineEditDisable)
-        self._ui.groupSettings_widget.groupFitStrainPenalty_lineEdit.setText(dataStr)
+        self._steps_ui.groupSettings_widget.groupFitStrainPenalty_checkBox.setTristate(checkBoxTristate)
+        self._steps_ui.groupSettings_widget.groupFitStrainPenalty_checkBox.setCheckState(checkBoxState)
+        self._steps_ui.groupSettings_widget.groupFitStrainPenalty_lineEdit.setDisabled(lineEditDisable)
+        self._steps_ui.groupSettings_widget.groupFitStrainPenalty_lineEdit.setText(dataStr)
 
     def _groupFitStrainPenaltyClicked(self):
-        checkState = self._ui.groupSettings_widget.groupFitStrainPenalty_checkBox.checkState()
+        checkState = self._steps_ui.groupSettings_widget.groupFitStrainPenalty_checkBox.checkState()
         groupName = self._getGroupSettingsGroupName()
         if checkState == QtCore.Qt.CheckState.Unchecked:
             self._getFit().setGroupStrainPenalty(groupName, None)
@@ -852,7 +899,7 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         self._updateGroupFitStrainPenalty()
 
     def _groupFitStrainPenaltyEntered(self):
-        value = parse_vector(self._ui.groupSettings_widget.groupFitStrainPenalty_lineEdit)
+        value = parse_vector(self._steps_ui.groupSettings_widget.groupFitStrainPenalty_lineEdit)
         groupName = self._getGroupSettingsGroupName()
         self._getFit().setGroupStrainPenalty(groupName, value)
         self._updateGroupFitStrainPenalty()
@@ -860,13 +907,13 @@ class GeometryFitterWidget(QtWidgets.QWidget):
     def _updateGroupFitCurvaturePenalty(self):
         checkBoxTristate, checkBoxState, lineEditDisable, dataStr = \
             self._getGroupSettingDisplayState(self._getFit().getGroupCurvaturePenalty)
-        self._ui.groupSettings_widget.groupFitCurvaturePenalty_checkBox.setTristate(checkBoxTristate)
-        self._ui.groupSettings_widget.groupFitCurvaturePenalty_checkBox.setCheckState(checkBoxState)
-        self._ui.groupSettings_widget.groupFitCurvaturePenalty_lineEdit.setDisabled(lineEditDisable)
-        self._ui.groupSettings_widget.groupFitCurvaturePenalty_lineEdit.setText(dataStr)
+        self._steps_ui.groupSettings_widget.groupFitCurvaturePenalty_checkBox.setTristate(checkBoxTristate)
+        self._steps_ui.groupSettings_widget.groupFitCurvaturePenalty_checkBox.setCheckState(checkBoxState)
+        self._steps_ui.groupSettings_widget.groupFitCurvaturePenalty_lineEdit.setDisabled(lineEditDisable)
+        self._steps_ui.groupSettings_widget.groupFitCurvaturePenalty_lineEdit.setText(dataStr)
 
     def _groupFitCurvaturePenaltyClicked(self):
-        checkState = self._ui.groupSettings_widget.groupFitCurvaturePenalty_checkBox.checkState()
+        checkState = self._steps_ui.groupSettings_widget.groupFitCurvaturePenalty_checkBox.checkState()
         groupName = self._getGroupSettingsGroupName()
         if checkState == QtCore.Qt.CheckState.Unchecked:
             self._getFit().setGroupCurvaturePenalty(groupName, None)
@@ -877,7 +924,7 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         self._updateGroupFitCurvaturePenalty()
 
     def _groupFitCurvaturePenaltyEntered(self):
-        value = parse_vector(self._ui.groupSettings_widget.groupFitCurvaturePenalty_lineEdit)
+        value = parse_vector(self._steps_ui.groupSettings_widget.groupFitCurvaturePenalty_lineEdit)
         groupName = self._getGroupSettingsGroupName()
         self._getFit().setGroupCurvaturePenalty(groupName, value)
         self._updateGroupFitCurvaturePenalty()
@@ -888,41 +935,41 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         """
         Set up config widgets and display values from fitter object.
         """
-        self._ui.initialConfig_widget.configModelCoordinates_fieldChooser.setRegion(self._fitter.getRegion())
-        self._ui.initialConfig_widget.configModelCoordinates_fieldChooser.setNullObjectName("-")
-        self._ui.initialConfig_widget.configModelCoordinates_fieldChooser.setConditional(field_is_managed_coordinates)
-        self._ui.initialConfig_widget.configModelCoordinates_fieldChooser.setField(self._fitter.getModelCoordinatesField())
-        self._ui.initialConfig_widget.configModelFitGroup_fieldChooser.setRegion(self._fitter.getRegion())
-        self._ui.initialConfig_widget.configModelFitGroup_fieldChooser.setNullObjectName("-")
-        self._ui.initialConfig_widget.configModelFitGroup_fieldChooser.setConditional(
+        self._steps_ui.initialConfig_widget.configModelCoordinates_fieldChooser.setRegion(self._fitter.getRegion())
+        self._steps_ui.initialConfig_widget.configModelCoordinates_fieldChooser.setNullObjectName("-")
+        self._steps_ui.initialConfig_widget.configModelCoordinates_fieldChooser.setConditional(field_is_managed_coordinates)
+        self._steps_ui.initialConfig_widget.configModelCoordinates_fieldChooser.setField(self._fitter.getModelCoordinatesField())
+        self._steps_ui.initialConfig_widget.configModelFitGroup_fieldChooser.setRegion(self._fitter.getRegion())
+        self._steps_ui.initialConfig_widget.configModelFitGroup_fieldChooser.setNullObjectName("-")
+        self._steps_ui.initialConfig_widget.configModelFitGroup_fieldChooser.setConditional(
             lambda field: field_is_managed_group_mesh(field, self._fitter.getHighestDimensionMesh()))
-        self._ui.initialConfig_widget.configModelFitGroup_fieldChooser.setField(self._fitter.getModelFitGroup())
-        self._ui.initialConfig_widget.configFibreOrientation_fieldChooser.setRegion(self._fitter.getRegion())
-        self._ui.initialConfig_widget.configFibreOrientation_fieldChooser.setNullObjectName("-")
-        self._ui.initialConfig_widget.configFibreOrientation_fieldChooser.setConditional(field_is_managed_real_1_to_3_components)
-        self._ui.initialConfig_widget.configFibreOrientation_fieldChooser.setField(self._fitter.getFibreField())
-        self._ui.initialConfig_widget.configFlattenGroup_fieldChooser.setRegion(self._fitter.getRegion())
-        self._ui.initialConfig_widget.configFlattenGroup_fieldChooser.setNullObjectName("-")
-        self._ui.initialConfig_widget.configFlattenGroup_fieldChooser.setConditional(field_is_managed_group)
-        self._ui.initialConfig_widget.configFlattenGroup_fieldChooser.setField(self._fitter.getFlattenGroup())
-        self._ui.initialConfig_widget.configDataCoordinates_fieldChooser.setRegion(self._fitter.getRegion())
-        self._ui.initialConfig_widget.configDataCoordinates_fieldChooser.setNullObjectName("-")
-        self._ui.initialConfig_widget.configDataCoordinates_fieldChooser.setConditional(field_is_managed_coordinates)
-        self._ui.initialConfig_widget.configDataCoordinates_fieldChooser.setField(self._fitter.getDataCoordinatesField())
-        self._ui.initialConfig_widget.configMarkerGroup_fieldChooser.setRegion(self._fitter.getRegion())
-        self._ui.initialConfig_widget.configMarkerGroup_fieldChooser.setNullObjectName("-")
-        self._ui.initialConfig_widget.configMarkerGroup_fieldChooser.setConditional(field_is_managed_group)
-        self._ui.initialConfig_widget.configMarkerGroup_fieldChooser.setField(self._fitter.getMarkerGroup())
-        self._ui.initialConfig_widget.configDiagnosticLevel_spinBox.setValue(self._fitter.getDiagnosticLevel())
+        self._steps_ui.initialConfig_widget.configModelFitGroup_fieldChooser.setField(self._fitter.getModelFitGroup())
+        self._steps_ui.initialConfig_widget.configFibreOrientation_fieldChooser.setRegion(self._fitter.getRegion())
+        self._steps_ui.initialConfig_widget.configFibreOrientation_fieldChooser.setNullObjectName("-")
+        self._steps_ui.initialConfig_widget.configFibreOrientation_fieldChooser.setConditional(field_is_managed_real_1_to_3_components)
+        self._steps_ui.initialConfig_widget.configFibreOrientation_fieldChooser.setField(self._fitter.getFibreField())
+        self._steps_ui.initialConfig_widget.configFlattenGroup_fieldChooser.setRegion(self._fitter.getRegion())
+        self._steps_ui.initialConfig_widget.configFlattenGroup_fieldChooser.setNullObjectName("-")
+        self._steps_ui.initialConfig_widget.configFlattenGroup_fieldChooser.setConditional(field_is_managed_group)
+        self._steps_ui.initialConfig_widget.configFlattenGroup_fieldChooser.setField(self._fitter.getFlattenGroup())
+        self._steps_ui.initialConfig_widget.configDataCoordinates_fieldChooser.setRegion(self._fitter.getRegion())
+        self._steps_ui.initialConfig_widget.configDataCoordinates_fieldChooser.setNullObjectName("-")
+        self._steps_ui.initialConfig_widget.configDataCoordinates_fieldChooser.setConditional(field_is_managed_coordinates)
+        self._steps_ui.initialConfig_widget.configDataCoordinates_fieldChooser.setField(self._fitter.getDataCoordinatesField())
+        self._steps_ui.initialConfig_widget.configMarkerGroup_fieldChooser.setRegion(self._fitter.getRegion())
+        self._steps_ui.initialConfig_widget.configMarkerGroup_fieldChooser.setNullObjectName("-")
+        self._steps_ui.initialConfig_widget.configMarkerGroup_fieldChooser.setConditional(field_is_managed_group)
+        self._steps_ui.initialConfig_widget.configMarkerGroup_fieldChooser.setField(self._fitter.getMarkerGroup())
+        self._steps_ui.initialConfig_widget.configDiagnosticLevel_spinBox.setValue(self._fitter.getDiagnosticLevel())
 
     def _makeConnectionsConfig(self):
-        self._ui.initialConfig_widget.configModelCoordinates_fieldChooser.currentIndexChanged.connect(self._configModelCoordinatesFieldChanged)
-        self._ui.initialConfig_widget.configModelFitGroup_fieldChooser.currentIndexChanged.connect(self._configModelFitGroupChanged)
-        self._ui.initialConfig_widget.configFibreOrientation_fieldChooser.currentIndexChanged.connect(self._configFibreOrientationFieldChanged)
-        self._ui.initialConfig_widget.configFlattenGroup_fieldChooser.currentIndexChanged.connect(self._configFlattenGroupChanged)
-        self._ui.initialConfig_widget.configDataCoordinates_fieldChooser.currentIndexChanged.connect(self._configDataCoordinatesFieldChanged)
-        self._ui.initialConfig_widget.configMarkerGroup_fieldChooser.currentIndexChanged.connect(self._configMarkerGroupChanged)
-        self._ui.initialConfig_widget.configDiagnosticLevel_spinBox.valueChanged.connect(self._configDiagnosticLevelValueChanged)
+        self._steps_ui.initialConfig_widget.configModelCoordinates_fieldChooser.currentIndexChanged.connect(self._configModelCoordinatesFieldChanged)
+        self._steps_ui.initialConfig_widget.configModelFitGroup_fieldChooser.currentIndexChanged.connect(self._configModelFitGroupChanged)
+        self._steps_ui.initialConfig_widget.configFibreOrientation_fieldChooser.currentIndexChanged.connect(self._configFibreOrientationFieldChanged)
+        self._steps_ui.initialConfig_widget.configFlattenGroup_fieldChooser.currentIndexChanged.connect(self._configFlattenGroupChanged)
+        self._steps_ui.initialConfig_widget.configDataCoordinates_fieldChooser.currentIndexChanged.connect(self._configDataCoordinatesFieldChanged)
+        self._steps_ui.initialConfig_widget.configMarkerGroup_fieldChooser.currentIndexChanged.connect(self._configMarkerGroupChanged)
+        self._steps_ui.initialConfig_widget.configDiagnosticLevel_spinBox.valueChanged.connect(self._configDiagnosticLevelValueChanged)
 
     def _getConfig(self):
         config = self._currentFitterStep
@@ -939,7 +986,7 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         """
         Callback for change in model coordinates field chooser widget.
         """
-        field = self._ui.initialConfig_widget.configModelCoordinates_fieldChooser.getField()
+        field = self._steps_ui.initialConfig_widget.configModelCoordinates_fieldChooser.getField()
         if field:
             self._fitter.setModelCoordinatesField(field)
             self._model.createGraphics()
@@ -948,25 +995,25 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         """
         Callback for change in model fit group field chooser widget.
         """
-        self._fitter.setModelFitGroup(self._ui.initialConfig_widget.configModelFitGroup_fieldChooser.getField())
+        self._fitter.setModelFitGroup(self._steps_ui.initialConfig_widget.configModelFitGroup_fieldChooser.getField())
 
     def _configFibreOrientationFieldChanged(self, index):
         """
         Callback for change in model coordinates field chooser widget.
         """
-        self._fitter.setFibreField(self._ui.initialConfig_widget.configFibreOrientation_fieldChooser.getField())
+        self._fitter.setFibreField(self._steps_ui.initialConfig_widget.configFibreOrientation_fieldChooser.getField())
 
     def _configFlattenGroupChanged(self, index):
         """
         Callback for change in flatten group field chooser widget.
         """
-        self._fitter.setFlattenGroup(self._ui.initialConfig_widget.configFlattenGroup_fieldChooser.getField())
+        self._fitter.setFlattenGroup(self._steps_ui.initialConfig_widget.configFlattenGroup_fieldChooser.getField())
 
     def _configDataCoordinatesFieldChanged(self, index):
         """
         Callback for change in data coordinates field chooser widget.
         """
-        field = self._ui.initialConfig_widget.configDataCoordinates_fieldChooser.getField()
+        field = self._steps_ui.initialConfig_widget.configDataCoordinates_fieldChooser.getField()
         if field:
             self._fitter.setDataCoordinatesField(field)
             self._model.createGraphics()
@@ -975,7 +1022,7 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         """
         Callback for change in marker group field chooser widget.
         """
-        group = self._ui.initialConfig_widget.configMarkerGroup_fieldChooser.getField()
+        group = self._steps_ui.initialConfig_widget.configMarkerGroup_fieldChooser.getField()
         if group:
             self._fitter.setMarkerGroup(group)
             self._model.createGraphics()
@@ -986,13 +1033,13 @@ class GeometryFitterWidget(QtWidgets.QWidget):
     # === align widgets ===
 
     def _makeConnectionsAlign(self):
-        self._ui.align_widget.alignGroups_checkBox.clicked.connect(self._alignGroupsClicked)
-        self._ui.align_widget.alignMarkers_checkBox.clicked.connect(self._alignMarkersClicked)
-        self._ui.align_widget.alignRotationManual_lineEdit.editingFinished.connect(self._alignRotationEntered)
-        self._ui.align_widget.alignScaleManual_lineEdit.editingFinished.connect(self._alignScaleEntered)
-        self._ui.align_widget.alignScaleProportion_lineEdit.editingFinished.connect(self._alignScaleProportionEntered)
-        self._ui.align_widget.alignTranslationManual_lineEdit.editingFinished.connect(self._alignTranslationEntered)
-        self._ui.align_widget.modeChanged.connect(self._alignModeChanged)
+        self._steps_ui.align_widget.alignGroups_checkBox.clicked.connect(self._alignGroupsClicked)
+        self._steps_ui.align_widget.alignMarkers_checkBox.clicked.connect(self._alignMarkersClicked)
+        self._steps_ui.align_widget.alignRotationManual_lineEdit.editingFinished.connect(self._alignRotationEntered)
+        self._steps_ui.align_widget.alignScaleManual_lineEdit.editingFinished.connect(self._alignScaleEntered)
+        self._steps_ui.align_widget.alignScaleProportion_lineEdit.editingFinished.connect(self._alignScaleProportionEntered)
+        self._steps_ui.align_widget.alignTranslationManual_lineEdit.editingFinished.connect(self._alignTranslationEntered)
+        self._steps_ui.align_widget.modeChanged.connect(self._alignModeChanged)
 
     def _getAlign(self):
         align = self._currentFitterStep
@@ -1000,14 +1047,14 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         return align
 
     def _updateAutoWidgets(self, rotation_string, scale_string, translation_string):
-        self._ui.align_widget.alignRotationAutoValue_label.setText(rotation_string)
-        self._ui.align_widget.alignScaleAutoValue_label.setText(scale_string)
-        self._ui.align_widget.alignTranslationAutoValue_label.setText(translation_string)
+        self._steps_ui.align_widget.alignRotationAutoValue_label.setText(rotation_string)
+        self._steps_ui.align_widget.alignScaleAutoValue_label.setText(scale_string)
+        self._steps_ui.align_widget.alignTranslationAutoValue_label.setText(translation_string)
 
     def _updateManualWidgets(self, rotation_string, scale_string, translation_string):
-        self._ui.align_widget.alignRotationManual_lineEdit.setText(rotation_string)
-        self._ui.align_widget.alignScaleManual_lineEdit.setText(scale_string)
-        self._ui.align_widget.alignTranslationManual_lineEdit.setText(translation_string)
+        self._steps_ui.align_widget.alignRotationManual_lineEdit.setText(rotation_string)
+        self._steps_ui.align_widget.alignScaleManual_lineEdit.setText(scale_string)
+        self._steps_ui.align_widget.alignTranslationManual_lineEdit.setText(translation_string)
 
     def _updateAlignWidgets(self, align=None):
         """
@@ -1020,12 +1067,12 @@ class GeometryFitterWidget(QtWidgets.QWidget):
             align = self._getAlign()
 
         matched_markers = align.matchingMarkerCount()
-        self._ui.align_widget.alignMarkers_checkBox.setText(f"({matched_markers} matched marker{'' if matched_markers == 1 else 's'}.)")
+        self._steps_ui.align_widget.alignMarkers_checkBox.setText(f"({matched_markers} matched marker{'' if matched_markers == 1 else 's'}.)")
         matched_groups = align.matchingGroupCount()
-        self._ui.align_widget.alignGroups_checkBox.setText(f"({matched_groups} matched group{'' if matched_groups == 1 else 's'}.)")
+        self._steps_ui.align_widget.alignGroups_checkBox.setText(f"({matched_groups} matched group{'' if matched_groups == 1 else 's'}.)")
 
-        self._ui.align_widget.alignGroups_checkBox.setCheckState(QtCore.Qt.CheckState.Checked if align.isAlignGroups() else QtCore.Qt.CheckState.Unchecked)
-        self._ui.align_widget.alignMarkers_checkBox.setCheckState(QtCore.Qt.CheckState.Checked if align.isAlignMarkers() else QtCore.Qt.CheckState.Unchecked)
+        self._steps_ui.align_widget.alignGroups_checkBox.setCheckState(QtCore.Qt.CheckState.Checked if align.isAlignGroups() else QtCore.Qt.CheckState.Unchecked)
+        self._steps_ui.align_widget.alignMarkers_checkBox.setCheckState(QtCore.Qt.CheckState.Checked if align.isAlignMarkers() else QtCore.Qt.CheckState.Unchecked)
 
         rotation_string = ", ".join(realFormat.format(value) for value in align.getRotation())
         scale_string = realFormat.format(align.getScale())
@@ -1053,13 +1100,13 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         self._sceneChanged()
 
     def _alignGroupsClicked(self):
-        state = self._ui.align_widget.alignGroups_checkBox.checkState()
+        state = self._steps_ui.align_widget.alignGroups_checkBox.checkState()
         align = self._getAlign()
         align.setAlignGroups(state == QtCore.Qt.CheckState.Checked)
         self._update_alignment_widgets(align)
 
     def _alignMarkersClicked(self):
-        state = self._ui.align_widget.alignMarkers_checkBox.checkState()
+        state = self._steps_ui.align_widget.alignMarkers_checkBox.checkState()
         align = self._getAlign()
         align.setAlignMarkers(state == QtCore.Qt.CheckState.Checked)
         self._update_alignment_widgets(align)
@@ -1075,31 +1122,31 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         can_align_markers = align_marker_count > 2
         can_auto_align = (align_group_count + align_marker_count) > 2
 
-        self._ui.align_widget.alignGroups_checkBox.setEnabled(can_align_groups)
-        self._ui.align_widget.alignMarkers_checkBox.setEnabled(can_align_markers)
+        self._steps_ui.align_widget.alignGroups_checkBox.setEnabled(can_align_groups)
+        self._steps_ui.align_widget.alignMarkers_checkBox.setEnabled(can_align_markers)
 
         if can_align_groups and is_align_groups and align_marker_count > 0:
-            self._ui.align_widget.alignMarkers_checkBox.setEnabled(True)
+            self._steps_ui.align_widget.alignMarkers_checkBox.setEnabled(True)
         elif can_align_groups and not is_align_groups and not can_align_markers:
-            self._ui.align_widget.alignMarkers_checkBox.setChecked(False)
+            self._steps_ui.align_widget.alignMarkers_checkBox.setChecked(False)
             align.setAlignMarkers(False)
 
         if can_align_markers and is_align_markers and align_group_count > 0:
-            self._ui.align_widget.alignGroups_checkBox.setEnabled(True)
+            self._steps_ui.align_widget.alignGroups_checkBox.setEnabled(True)
         elif can_align_markers and not is_align_markers and not can_align_groups:
-            self._ui.align_widget.alignGroups_checkBox.setChecked(False)
+            self._steps_ui.align_widget.alignGroups_checkBox.setChecked(False)
             align.setAlignGroups(False)
 
         if can_auto_align and not can_align_markers and not can_align_groups:
-            self._ui.align_widget.alignGroups_checkBox.setChecked(True)
+            self._steps_ui.align_widget.alignGroups_checkBox.setChecked(True)
             align.setAlignGroups(True)
-            self._ui.align_widget.alignMarkers_checkBox.setChecked(True)
+            self._steps_ui.align_widget.alignMarkers_checkBox.setChecked(True)
             align.setAlignMarkers(True)
 
-        self._ui.align_widget.alignScaleProportion_lineEdit.setEnabled(is_align_markers or is_align_groups)
+        self._steps_ui.align_widget.alignScaleProportion_lineEdit.setEnabled(is_align_markers or is_align_groups)
 
     def _alignRotationEntered(self):
-        values = parse_vector_3(self._ui.align_widget.alignRotationManual_lineEdit)
+        values = parse_vector_3(self._steps_ui.align_widget.alignRotationManual_lineEdit)
         if values:
             self._getAlign().setRotation(values)
         else:
@@ -1107,7 +1154,7 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         # self._updateAlignWidgets()
 
     def _alignScaleEntered(self):
-        value = parse_real_non_negative(self._ui.align_widget.alignScaleManual_lineEdit)
+        value = parse_real_non_negative(self._steps_ui.align_widget.alignScaleManual_lineEdit)
         if value > 0.0:
             self._getAlign().setScale(value)
         else:
@@ -1115,12 +1162,12 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         # self._updateAlignWidgets()
 
     def _alignScaleProportionEntered(self):
-        value = parse_real_non_negative(self._ui.align_widget.alignScaleProportion_lineEdit)
+        value = parse_real_non_negative(self._steps_ui.align_widget.alignScaleProportion_lineEdit)
         self._getAlign().setScaleProportion(value)
         # self._updateAlignWidgets()
 
     def _alignTranslationEntered(self):
-        values = parse_vector_3(self._ui.align_widget.alignTranslationManual_lineEdit)
+        values = parse_vector_3(self._steps_ui.align_widget.alignTranslationManual_lineEdit)
         if values:
             self._getAlign().setTranslation(values)
         else:
@@ -1137,11 +1184,11 @@ class GeometryFitterWidget(QtWidgets.QWidget):
                 self._alignScaleEntered()
                 self._alignTranslationEntered()
             else:
-                values = parse_vector_3(self._ui.align_widget.alignRotationAutoValue_label)
+                values = parse_vector_3(self._steps_ui.align_widget.alignRotationAutoValue_label)
                 align.setRotation(values if values else [0, 0, 0])
-                value = parse_real_non_negative(self._ui.align_widget.alignScaleAutoValue_label)
+                value = parse_real_non_negative(self._steps_ui.align_widget.alignScaleAutoValue_label)
                 align.setScale(value if value else 1)
-                values = parse_vector_3(self._ui.align_widget.alignTranslationAutoValue_label)
+                values = parse_vector_3(self._steps_ui.align_widget.alignTranslationAutoValue_label)
                 align.setTranslation(values if values else [0, 0, 0])
 
     def _applyAlignSettings(self, reorder=False):
@@ -1154,9 +1201,9 @@ class GeometryFitterWidget(QtWidgets.QWidget):
     # === fit widgets ===
 
     def _makeConnectionsFit(self):
-        self._ui.fit_widget.fitIterations_spinBox.valueChanged.connect(self._fitIterationsValueChanged)
-        self._ui.fit_widget.fitMaximumSubIterations_spinBox.valueChanged.connect(self._fitMaximumSubIterationsValueChanged)
-        self._ui.fit_widget.fitUpdateReferenceState_checkBox.clicked.connect(self._fitUpdateReferenceStateClicked)
+        self._steps_ui.fit_widget.fitIterations_spinBox.valueChanged.connect(self._fitIterationsValueChanged)
+        self._steps_ui.fit_widget.fitMaximumSubIterations_spinBox.valueChanged.connect(self._fitMaximumSubIterationsValueChanged)
+        self._steps_ui.fit_widget.fitUpdateReferenceState_checkBox.clicked.connect(self._fitUpdateReferenceStateClicked)
 
     def _getFit(self):
         assert isinstance(self._currentFitterStep, FitterStepFit)
@@ -1167,9 +1214,9 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         Update fit widgets to display parameters from fit step.
         """
         fit = self._getFit()
-        self._ui.fit_widget.fitIterations_spinBox.setValue(fit.getNumberOfIterations())
-        self._ui.fit_widget.fitMaximumSubIterations_spinBox.setValue(fit.getMaximumSubIterations())
-        self._ui.fit_widget.fitUpdateReferenceState_checkBox.setCheckState(QtCore.Qt.CheckState.Checked if fit.isUpdateReferenceState() else QtCore.Qt.CheckState.Unchecked)
+        self._steps_ui.fit_widget.fitIterations_spinBox.setValue(fit.getNumberOfIterations())
+        self._steps_ui.fit_widget.fitMaximumSubIterations_spinBox.setValue(fit.getMaximumSubIterations())
+        self._steps_ui.fit_widget.fitUpdateReferenceState_checkBox.setCheckState(QtCore.Qt.CheckState.Checked if fit.isUpdateReferenceState() else QtCore.Qt.CheckState.Unchecked)
         self._updateGroupSettingWidgets()
 
     def _fitIterationsValueChanged(self, value):
@@ -1179,5 +1226,5 @@ class GeometryFitterWidget(QtWidgets.QWidget):
         self._getFit().setMaximumSubIterations(value)
 
     def _fitUpdateReferenceStateClicked(self):
-        state = self._ui.fit_widget.fitUpdateReferenceState_checkBox.checkState()
+        state = self._steps_ui.fit_widget.fitUpdateReferenceState_checkBox.checkState()
         self._getFit().setUpdateReferenceState(state == QtCore.Qt.CheckState.Checked)
