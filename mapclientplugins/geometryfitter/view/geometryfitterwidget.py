@@ -63,7 +63,7 @@ class GeometryFitterWidget(QtWidgets.QMainWindow):
 
     def _setup_dock_widget(self):
         """
-        Set up the dock widget for the field fitter.
+        Set up the dock widget for the geometry fitter.
         """
         parent_widget = QtWidgets.QWidget(self)
 
