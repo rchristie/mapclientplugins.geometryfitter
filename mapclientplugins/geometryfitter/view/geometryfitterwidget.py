@@ -391,7 +391,7 @@ class GeometryFitterWidget(QtWidgets.QMainWindow):
         self._display_settings_ui.displayAxes_checkBox.clicked.connect(self._displayAxesClicked)
         self._display_settings_ui.displayDataMarkerPoints_checkBox.clicked.connect(self._displayMarkerDataPointsClicked)
         self._display_settings_ui.displayDataMarkerNames_checkBox.clicked.connect(self._displayMarkerDataNamesClicked)
-        self._display_settings_ui.displayMarkerDataProjections_checkBox.clicked.connect(self._displayMarkerDataProjectionsClicked)
+        self._display_settings_ui.displayDataMarkerProjections_checkBox.clicked.connect(self._displayMarkerDataProjectionsClicked)
         self._display_settings_ui.displayMarkerPoints_checkBox.clicked.connect(self._displayMarkerPointsClicked)
         self._display_settings_ui.displayMarkerNames_checkBox.clicked.connect(self._displayMarkerNamesClicked)
         self._display_settings_ui.displayDataPoints_checkBox.clicked.connect(self._displayDataPointsClicked)
@@ -437,7 +437,7 @@ class GeometryFitterWidget(QtWidgets.QMainWindow):
         self._display_settings_ui.displayGroup_fieldChooser.currentIndexChanged.connect(self._displayGroupChanged)
         self._display_settings_ui.displayDataMarkerPoints_checkBox.setChecked(self._model.isDisplayMarkerDataPoints())
         self._display_settings_ui.displayDataMarkerNames_checkBox.setChecked(self._model.isDisplayMarkerDataNames())
-        self._display_settings_ui.displayMarkerDataProjections_checkBox.setChecked(self._model.isDisplayMarkerDataProjections())
+        self._display_settings_ui.displayDataMarkerProjections_checkBox.setChecked(self._model.isDisplayMarkerDataProjections())
         self._display_settings_ui.displayMarkerPoints_checkBox.setChecked(self._model.isDisplayMarkerPoints())
         self._display_settings_ui.displayMarkerNames_checkBox.setChecked(self._model.isDisplayMarkerNames())
         self._display_settings_ui.displayDataPoints_checkBox.setChecked(self._model.isDisplayDataPoints())
@@ -495,7 +495,7 @@ class GeometryFitterWidget(QtWidgets.QMainWindow):
         self._model.setDisplayMarkerDataNames(self._display_settings_ui.displayDataMarkerNames_checkBox.isChecked())
 
     def _displayMarkerDataProjectionsClicked(self):
-        self._model.setDisplayMarkerDataProjections(self._display_settings_ui.displayMarkerDataProjections_checkBox.isChecked())
+        self._model.setDisplayMarkerDataProjections(self._display_settings_ui.displayDataMarkerProjections_checkBox.isChecked())
 
     def _displayMarkerPointsClicked(self):
         self._model.setDisplayMarkerPoints(self._display_settings_ui.displayMarkerPoints_checkBox.isChecked())
