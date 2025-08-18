@@ -452,7 +452,11 @@ class GeometryFitterWidget(QtWidgets.QMainWindow):
         self._display_settings_ui.displayNodeDerivativeLabelsD13_checkBox.setChecked(self._model.isDisplayNodeDerivativeLabels("D13"))
         self._display_settings_ui.displayNodeDerivativeLabelsD23_checkBox.setChecked(self._model.isDisplayNodeDerivativeLabels("D23"))
         self._display_settings_ui.displayNodeDerivativeLabelsD123_checkBox.setChecked(self._model.isDisplayNodeDerivativeLabels("D123"))
-        self._display_settings_ui.displayNodeDerivatives_checkBox.setChecked(self._model.isDisplayNodeDerivatives())
+        displayNodeDerivatives = self._model.getDisplayNodeDerivatives()
+        self._display_settings_ui.displayNodeDerivatives_checkBox.setCheckState(
+            QtCore.Qt.CheckState.Unchecked if not displayNodeDerivatives else
+            QtCore.Qt.CheckState.PartiallyChecked if (displayNodeDerivatives == 1) else
+            QtCore.Qt.CheckState.Checked)
         self._display_settings_ui.displayElementNumbers_checkBox.setChecked(self._model.isDisplayElementNumbers())
         self._display_settings_ui.displayElementAxes_checkBox.setChecked(self._model.isDisplayElementAxes())
         self._display_settings_ui.displayLines_checkBox.setChecked(self._model.isDisplayLines())
@@ -519,7 +523,10 @@ class GeometryFitterWidget(QtWidgets.QMainWindow):
         self._model.setDisplayNodeNumbers(self._display_settings_ui.displayNodeNumbers_checkBox.isChecked())
 
     def _displayNodeDerivativesClicked(self):
-        self._model.setDisplayNodeDerivatives(self._display_settings_ui.displayNodeDerivatives_checkBox.isChecked())
+        checkState = self._display_settings_ui.displayNodeDerivatives_checkBox.checkState()
+        triState = (0 if (checkState == QtCore.Qt.CheckState.Unchecked) else
+                    1 if (checkState == QtCore.Qt.CheckState.PartiallyChecked) else 2)
+        self._model.setDisplayNodeDerivatives(triState)
 
     def _displayNodeDerivativeLabelsD1Clicked(self):
         self._model.setDisplayNodeDerivativeLabels("D1", self._display_settings_ui.displayNodeDerivativeLabelsD1_checkBox.isChecked())
