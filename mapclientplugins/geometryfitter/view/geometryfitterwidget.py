@@ -397,6 +397,8 @@ class GeometryFitterWidget(QtWidgets.QMainWindow):
         self._display_settings_ui.displayDataPoints_checkBox.clicked.connect(self._displayDataPointsClicked)
         self._display_settings_ui.displayDataProjections_checkBox.clicked.connect(self._displayDataProjectionsClicked)
         self._display_settings_ui.displayDataProjectionPoints_checkBox.clicked.connect(self._displayDataProjectionPointsClicked)
+        self._display_settings_ui.displayDataProjectionTangents_checkBox.clicked.connect(
+            self._displayDataProjectionTangentsClicked)
         self._display_settings_ui.displayNodePoints_checkBox.clicked.connect(self._displayNodePointsClicked)
         self._display_settings_ui.displayNodeNumbers_checkBox.clicked.connect(self._displayNodeNumbersClicked)
         self._display_settings_ui.displayNodeDerivativeLabelsD1_checkBox.clicked.connect(self._displayNodeDerivativeLabelsD1Clicked)
@@ -443,6 +445,8 @@ class GeometryFitterWidget(QtWidgets.QMainWindow):
         self._display_settings_ui.displayDataPoints_checkBox.setChecked(self._model.isDisplayDataPoints())
         self._display_settings_ui.displayDataProjections_checkBox.setChecked(self._model.isDisplayDataProjections())
         self._display_settings_ui.displayDataProjectionPoints_checkBox.setChecked(self._model.isDisplayDataProjectionPoints())
+        self._display_settings_ui.displayDataProjectionTangents_checkBox.setChecked(
+            self._model.isDisplayDataProjectionTangents())
         self._display_settings_ui.displayNodePoints_checkBox.setChecked(self._model.isDisplayNodePoints())
         self._display_settings_ui.displayNodeNumbers_checkBox.setChecked(self._model.isDisplayNodeNumbers())
         self._display_settings_ui.displayNodeDerivativeLabelsD1_checkBox.setChecked(self._model.isDisplayNodeDerivativeLabels("D1"))
@@ -515,6 +519,9 @@ class GeometryFitterWidget(QtWidgets.QMainWindow):
 
     def _displayDataProjectionPointsClicked(self):
         self._model.setDisplayDataProjectionPoints(self._display_settings_ui.displayDataProjectionPoints_checkBox.isChecked())
+
+    def _displayDataProjectionTangentsClicked(self):
+        self._model.setDisplayDataProjectionTangents(self._display_settings_ui.displayDataProjectionTangents_checkBox.isChecked())
 
     def _displayNodePointsClicked(self):
         self._model.setDisplayNodePoints(self._display_settings_ui.displayNodePoints_checkBox.isChecked())

@@ -49,7 +49,8 @@ class GeometryFitterModel(object):
             "displayMarkerNames": False,
             "displayDataPoints": True,
             "displayDataProjections": True,
-            "displayDataProjectionPoints": True,
+            "displayDataProjectionPoints": False,
+            "displayDataProjectionTangents": False,
             "displayNodePoints": False,
             "displayNodeNumbers": False,
             'displayNodeDerivatives': 0,  # tri-state: 0=show none, 1=show selected, 2=show all
@@ -313,13 +314,19 @@ class GeometryFitterModel(object):
         return self._getVisibility("displayDataProjections")
 
     def setDisplayDataProjections(self, show):
-        self._setMultipleGraphicsVisibility("displayDataProjections", show)
+        self._setVisibility("displayDataProjections", show)
 
     def isDisplayDataProjectionPoints(self):
         return self._getVisibility("displayDataProjectionPoints")
 
     def setDisplayDataProjectionPoints(self, show):
-        self._setMultipleGraphicsVisibility("displayDataProjectionPoints", show)
+        self._setVisibility("displayDataProjectionPoints", show)
+
+    def isDisplayDataProjectionTangents(self):
+        return self._getVisibility("displayDataProjectionTangents")
+
+    def setDisplayDataProjectionTangents(self, show):
+        self._setVisibility("displayDataProjectionTangents", show)
 
     def isDisplayNodeNumbers(self):
         return self._getVisibility("displayNodeNumbers")
@@ -640,18 +647,26 @@ class GeometryFitterModel(object):
                 if dataProjectionCoordinates:
                     dataProjectionPoints.setCoordinateField(dataProjectionCoordinates)
                 pointattr = dataProjectionPoints.getGraphicspointattributes()
-                if True:
-                    # visualize local projection tangent 1
-                    pointattr.setGlyphShapeType(Glyph.SHAPE_TYPE_LINE)
-                    pointattr.setOrientationScaleField(self._fitter.getDataProjectionOrientationField())
-                    pointattr.setBaseSize([glyphWidthSmall, glyphWidthSmall, glyphWidthSmall])
-                    pointattr.setScaleFactors([0.0, 0.0, 0.0])
-                # else:
-                #     pointattr.setGlyphShapeType(Glyph.SHAPE_TYPE_POINT)
-                #     dataProjectionPoints.setRenderPointSize(3.0)
+                pointattr.setGlyphShapeType(Glyph.SHAPE_TYPE_POINT)
+                dataProjectionPoints.setRenderPointSize(3.0)
                 dataProjectionPoints.setMaterial(self._materialmodule.findMaterialByName("grey50"))
                 dataProjectionPoints.setName("displayDataProjectionPoints")
                 dataProjectionPoints.setVisibilityFlag(self.isDisplayDataProjectionPoints())
+
+                dataProjectionTangents = scene.createGraphicsPoints()
+                dataProjectionTangents.setFieldDomainType(Field.DOMAIN_TYPE_DATAPOINTS)
+                dataProjectionTangents.setSubgroupField(dataProjectionNodeGroup)
+                if dataProjectionCoordinates:
+                    dataProjectionTangents.setCoordinateField(dataProjectionCoordinates)
+                pointattr = dataProjectionTangents.getGraphicspointattributes()
+                # visualize local projection tangent 1
+                pointattr.setGlyphShapeType(Glyph.SHAPE_TYPE_LINE)
+                pointattr.setOrientationScaleField(self._fitter.getDataProjectionOrientationField())
+                pointattr.setBaseSize([glyphWidthSmall, glyphWidthSmall, glyphWidthSmall])
+                pointattr.setScaleFactors([0.0, 0.0, 0.0])
+                dataProjectionTangents.setMaterial(self._materialmodule.findMaterialByName("grey50"))
+                dataProjectionTangents.setName("displayDataProjectionTangents")
+                dataProjectionTangents.setVisibilityFlag(self.isDisplayDataProjectionTangents())
 
             nodePoints = scene.createGraphicsPoints()
             nodePoints.setFieldDomainType(Field.DOMAIN_TYPE_NODES)
@@ -839,6 +854,7 @@ class GeometryFitterModel(object):
             "displayMarkerDataNames",
             "displayMarkerDataProjections",
             "displayDataProjectionPoints",
+            "displayDataProjectionTangents",
             "displayDataProjections",
             "displayAxes",
         ]
