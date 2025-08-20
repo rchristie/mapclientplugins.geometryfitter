@@ -101,15 +101,15 @@ class GeometryFitterModel(object):
         defaultTessellation = tessellationmodule.getDefaultTessellation()
         defaultTessellation.setRefinementFactors([12])
 
-    def _getFitSettingsFileName(self):
+    def getJsonSettingsFilename(self):
         return self._location + "-settings.json"
 
-    def _getDisplaySettingsFileName(self):
+    def getJsonDisplaySettingsFilename(self):
         return self._location + "-display-settings.json"
 
     def _loadSettings(self, reset_settings):
         # try:
-        fitSettingsFileName = self._getFitSettingsFileName()
+        fitSettingsFileName = self.getJsonSettingsFilename()
         if os.path.isfile(fitSettingsFileName):
             if reset_settings:
                 if os.path.isfile(fitSettingsFileName):
@@ -121,7 +121,7 @@ class GeometryFitterModel(object):
         #    print('_loadSettings FitSettings EXCEPTION')
         #    raise()
         # try:
-        displaySettingsFileName = self._getDisplaySettingsFileName()
+        displaySettingsFileName = self.getJsonDisplaySettingsFilename()
         if os.path.isfile(displaySettingsFileName):
             if reset_settings:
                 if os.path.isfile(displaySettingsFileName):
@@ -139,9 +139,9 @@ class GeometryFitterModel(object):
         #    pass
 
     def _saveSettings(self):
-        with open(self._getFitSettingsFileName(), "w") as f:
+        with open(self.getJsonSettingsFilename(), "w") as f:
             f.write(self._fitter.encodeSettingsJSON())
-        with open(self._getDisplaySettingsFileName(), "w") as f:
+        with open(self.getJsonDisplaySettingsFilename(), "w") as f:
             f.write(json.dumps(self._displaySettings, sort_keys=False, indent=4))
 
     def getOutputModelFileNameStem(self):
