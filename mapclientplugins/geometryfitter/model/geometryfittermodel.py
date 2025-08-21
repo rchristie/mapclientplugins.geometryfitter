@@ -108,6 +108,19 @@ class GeometryFitterModel(object):
     def getJsonDisplaySettingsFilename(self):
         return self._location + "-display-settings.json"
 
+    GEOMETRY_FITTER_DISPLAY_SETTINGS_ID = 'geometry fitter display settings'
+
+    def _getOutputDisplaySettings(self):
+        """
+        :return: Display settings augmented with id and version information.
+        """
+        displaySettingsDct = {
+            'id': self.GEOMETRY_FITTER_DISPLAY_SETTINGS_ID,
+            'version': '1.0.0'
+        }
+        displaySettingsDct.update(self._displaySettings)
+        return displaySettingsDct
+
     def _loadSettings(self, reset_settings):
         # try:
         fitSettingsFileName = self.getJsonSettingsFilename()
@@ -130,6 +143,13 @@ class GeometryFitterModel(object):
             else:
                 with open(displaySettingsFileName, "r") as f:
                     savedSettings = json.loads(f.read())
+                    id = savedSettings.get('id')
+                    if id is not None:
+                        assert id == self.GEOMETRY_FITTER_DISPLAY_SETTINGS_ID
+                        assert savedSettings['version'] == '1.0.0'  # future: migrate if version changes
+                        # these are not stored:
+                        del savedSettings['id']
+                        del savedSettings['version']
                     # migrate to tristate:
                     displayNodeDerivatives = savedSettings.get('displayNodeDerivatives')
                     if displayNodeDerivatives == True:
@@ -143,7 +163,7 @@ class GeometryFitterModel(object):
         with open(self.getJsonSettingsFilename(), "w") as f:
             f.write(self._fitter.encodeSettingsJSON())
         with open(self.getJsonDisplaySettingsFilename(), "w") as f:
-            f.write(json.dumps(self._displaySettings, sort_keys=False, indent=4))
+            f.write(json.dumps(self._getOutputDisplaySettings(), sort_keys=False, indent=4))
 
     def getOutputModelFileNameStem(self):
         return self._location
