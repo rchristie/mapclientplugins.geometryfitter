@@ -24,23 +24,47 @@ class GeometryFitterStep(WorkflowStepMountPoint):
         # Add any other initialisation code here:
         self._icon = QtGui.QImage(':/geometryfitter/images/fitting.png')
         # Ports:
-        self.addPort(('http://physiomeproject.org/workflow/1.0/rdf-schema#port',
-                      'http://physiomeproject.org/workflow/1.0/rdf-schema#uses',
-                      'http://physiomeproject.org/workflow/1.0/rdf-schema#file_location'))
-        self.addPort(('http://physiomeproject.org/workflow/1.0/rdf-schema#port',
-                      'http://physiomeproject.org/workflow/1.0/rdf-schema#uses',
-                      'http://physiomeproject.org/workflow/1.0/rdf-schema#file_location'))
-        self.addPort(('http://physiomeproject.org/workflow/1.0/rdf-schema#port',
-                      'http://physiomeproject.org/workflow/1.0/rdf-schema#provides',
-                      'http://physiomeproject.org/workflow/1.0/rdf-schema#file_location'))
+        self.addPort([('http://physiomeproject.org/workflow/1.0/rdf-schema#port',
+                       'http://physiomeproject.org/workflow/1.0/rdf-schema#uses',
+                       'http://physiomeproject.org/workflow/1.0/rdf-schema#file_location'),
+                      ('http://physiomeproject.org/workflow/1.0/rdf-schema#port',
+                       'http://physiomeproject.org/workflow/1.0/rdf-schema#uses',
+                       'http://physiomeproject.org/workflow/1.0/rdf-schema#exf_file_location')])
+        self.addPort([('http://physiomeproject.org/workflow/1.0/rdf-schema#port',
+                       'http://physiomeproject.org/workflow/1.0/rdf-schema#uses',
+                       'http://physiomeproject.org/workflow/1.0/rdf-schema#file_location'),
+                      ('http://physiomeproject.org/workflow/1.0/rdf-schema#port',
+                       'http://physiomeproject.org/workflow/1.0/rdf-schema#uses',
+                       'http://physiomeproject.org/workflow/1.0/rdf-schema#exf_file_location')])
+        self.addPort([('http://physiomeproject.org/workflow/1.0/rdf-schema#port',
+                       'http://physiomeproject.org/workflow/1.0/rdf-schema#provides',
+                       'http://physiomeproject.org/workflow/1.0/rdf-schema#file_location'),
+                      ('http://physiomeproject.org/workflow/1.0/rdf-schema#port',
+                       'http://physiomeproject.org/workflow/1.0/rdf-schema#provides',
+                       'http://physiomeproject.org/workflow/1.0/rdf-schema#exf_file_location')])
+        self.addPort([('http://physiomeproject.org/workflow/1.0/rdf-schema#port',
+                       'http://physiomeproject.org/workflow/1.0/rdf-schema#provides',
+                       'http://physiomeproject.org/workflow/1.0/rdf-schema#file_location'),
+                      ('http://physiomeproject.org/workflow/1.0/rdf-schema#port',
+                       'http://physiomeproject.org/workflow/1.0/rdf-schema#provides',
+                       'http://physiomeproject.org/workflow/1.0/rdf-schema#json_file_location')])
         # Port data:
-        self._port0_inputZincModelFile = None  # http://physiomeproject.org/workflow/1.0/rdf-schema#file_location
-        self._port1_inputZincDataFile = None  # http://physiomeproject.org/workflow/1.0/rdf-schema#file_location
-        self._port2_outputZincModelFile = None  # http://physiomeproject.org/workflow/1.0/rdf-schema#file_location
+        self._port0_inputZincModelFile = None  # input exf_file_location
+        self._port1_inputZincDataFile = None  # input exf_file_location
+        self._port2_outputZincModelFile = None  # output exf_file_location
+        self._port3_outputJsonSettingsFilename = None  # output json_file_location
         # Config:
         self._config = {'identifier': '', 'reset': False, 'auto-fit': False}
         self._model = None
         self._view = None
+
+    def _create_model(self):
+        """
+        Ensure self._model is constructed if not already existing.
+        """
+        if not self._model:
+            self._model = GeometryFitterModel(self._port0_inputZincModelFile, self._port1_inputZincDataFile,
+                                              self._location, self._config['identifier'], self._config['reset'])
 
     def execute(self):
         """
@@ -51,17 +75,25 @@ class GeometryFitterStep(WorkflowStepMountPoint):
         # Put your execute step code here before calling the '_doneExecution' method.
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.WaitCursor)
         try:
-            self._model = GeometryFitterModel(self._port0_inputZincModelFile, self._port1_inputZincDataFile, self._location, self._config['identifier'], self._config['reset'])
+            self._create_model()
+            self._model.load()
             self._config['reset'] = False
             if self._config['auto-fit']:
                 self._model.done()
-                self._doneExecution()
+                self._my_done_execution()
             else:
                 self._view = GeometryFitterWidget(self._model)
-                self._view.registerDoneExecution(self._doneExecution)
+                self._view.registerDoneExecution(self._my_done_execution)
                 self._setCurrentWidget(self._view)
         finally:
             QtWidgets.QApplication.restoreOverrideCursor()
+
+    def _my_done_execution(self):
+        self._port2_outputZincModelFile = self._model.getOutputModelFileName()  # exf_file_location
+        self._port3_outputJsonSettingsFilename = self._model.getJsonSettingsFilename()  # json_file_location
+        self._view = None
+        self._model = None
+        self._doneExecution()
 
     def setPortData(self, index, dataIn):
         """
@@ -73,9 +105,9 @@ class GeometryFitterStep(WorkflowStepMountPoint):
         :param dataIn: The data to set for the port at the given index.
         """
         if index == 0:
-            self._port0_inputZincModelFile = dataIn  # http://physiomeproject.org/workflow/1.0/rdf-schema#file_location
+            self._port0_inputZincModelFile = dataIn  # exf_file_location
         elif index == 1:
-            self._port1_inputZincDataFile = dataIn  # http://physiomeproject.org/workflow/1.0/rdf-schema#file_location
+            self._port1_inputZincDataFile = dataIn  # exf_file_location
 
     def getPortData(self, index):
         """
@@ -85,7 +117,11 @@ class GeometryFitterStep(WorkflowStepMountPoint):
 
         :param index: Index of the port to return.
         """
-        return self._model.getOutputModelFileName()
+        if index == 2:
+            return self._port2_outputZincModelFile  # exf_file_location
+        if index == 3:
+            return self._port3_outputJsonSettingsFilename  # json_file_location
+        return None
 
     def configure(self):
         """
@@ -139,3 +175,7 @@ class GeometryFitterStep(WorkflowStepMountPoint):
         d.identifierOccursCount = self._identifierOccursCount
         d.setConfig(self._config)
         self._configured = d.validate()
+
+    def getAdditionalConfigFiles(self):
+        self._create_model()
+        return [self._model.getJsonSettingsFilename(), self._model.getJsonDisplaySettingsFilename()]

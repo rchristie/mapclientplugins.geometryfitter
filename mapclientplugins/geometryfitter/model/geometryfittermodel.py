@@ -6,11 +6,12 @@ import json
 
 from cmlibs.maths.vectorops import add, axis_angle_to_rotation_matrix, euler_to_rotation_matrix, matrix_minor, \
     matrix_mult, rotation_matrix_to_euler, matrix_inv, identity_matrix
-from cmlibs.utils.zinc.field import create_jacobian_determinant_field
+from cmlibs.utils.zinc.field import create_jacobian_determinant_field, determine_node_field_derivatives
 from cmlibs.utils.zinc.finiteelement import evaluateFieldNodesetRange
 from cmlibs.utils.zinc.general import ChangeManager
 from cmlibs.utils.zinc.group import group_add_group_elements, group_add_group_nodes
-from cmlibs.utils.zinc.scene import scene_get_selection_group, scene_create_selection_group
+from cmlibs.utils.zinc.scene import (
+    scene_create_node_derivative_graphics, scene_get_selection_group, scene_create_selection_group)
 from cmlibs.zinc.field import Field, FieldGroup
 from cmlibs.zinc.glyph import Glyph
 from cmlibs.zinc.graphics import Graphics
@@ -21,26 +22,25 @@ from cmlibs.zinc.scenecoordinatesystem import SCENECOORDINATESYSTEM_WORLD
 from scaffoldfitter.fitter import Fitter
 from scaffoldfitter.fitterjson import decodeJSONFitterSteps
 
-nodeDerivativeLabels = ["D1", "D2", "D3", "D12", "D13", "D23", "D123"]
-
 
 class GeometryFitterModel(object):
     """
     Geometric fit model adding visualisations to github.com/ABI-Software/scaffoldfitter
     """
 
-    def __init__(self, inputZincModelFile, inputZincDataFile, location, identifier, reset_settings):
+    def __init__(self, input_zinc_model_file, input_zinc_data_file, location, identifier, reset_settings):
         """
         :param location: Path to folder for mapclient step name.
         """
         self._manualAlignTempInvisible = None
         self._initial_matrix = []
-        self._fitter = Fitter(inputZincModelFile, inputZincDataFile)
+        self._fitter = Fitter(input_zinc_model_file, input_zinc_data_file)
         # self._fitter.setDiagnosticLevel(1)
         self._location = os.path.join(location, identifier)
         self._identifier = identifier
         self._initGraphicsModules()
-        self._settings = {
+        self._nodeDerivativeLabels = ['D1', 'D2', 'D3', 'D12', 'D13', 'D23', 'D123']
+        self._displaySettings = {
             "displayAxes": True,
             "displayMarkerDataPoints": True,
             "displayMarkerDataNames": False,
@@ -49,11 +49,12 @@ class GeometryFitterModel(object):
             "displayMarkerNames": False,
             "displayDataPoints": True,
             "displayDataProjections": True,
-            "displayDataProjectionPoints": True,
+            "displayDataProjectionPoints": False,
+            "displayDataProjectionTangents": False,
             "displayNodePoints": False,
             "displayNodeNumbers": False,
-            "displayNodeDerivatives": False,
-            "displayNodeDerivativeLabels": nodeDerivativeLabels[0:3],
+            'displayNodeDerivatives': 0,  # tri-state: 0=show none, 1=show selected, 2=show all
+            "displayNodeDerivativeLabels": self._nodeDerivativeLabels[0:3],
             "displayElementNumbers": False,
             "displayElementAxes": False,
             "displayLines": True,
@@ -66,7 +67,6 @@ class GeometryFitterModel(object):
             "displaySubgroupFieldName":  None
         }
         self._loadSettings(reset_settings)
-        self._fitter.load()
         self._isStateAlign = False
         self._alignStep = None
         self._modelTransformedCoordinateField = None
@@ -101,15 +101,28 @@ class GeometryFitterModel(object):
         defaultTessellation = tessellationmodule.getDefaultTessellation()
         defaultTessellation.setRefinementFactors([12])
 
-    def _getFitSettingsFileName(self):
+    def getJsonSettingsFilename(self):
         return self._location + "-settings.json"
 
-    def _getDisplaySettingsFileName(self):
+    def getJsonDisplaySettingsFilename(self):
         return self._location + "-display-settings.json"
+
+    GEOMETRY_FITTER_DISPLAY_SETTINGS_ID = 'geometry fitter display settings'
+
+    def _getOutputDisplaySettings(self):
+        """
+        :return: Display settings augmented with id and version information.
+        """
+        displaySettingsDct = {
+            'id': self.GEOMETRY_FITTER_DISPLAY_SETTINGS_ID,
+            'version': '1.0.0'
+        }
+        displaySettingsDct.update(self._displaySettings)
+        return displaySettingsDct
 
     def _loadSettings(self, reset_settings):
         # try:
-        fitSettingsFileName = self._getFitSettingsFileName()
+        fitSettingsFileName = self.getJsonSettingsFilename()
         if os.path.isfile(fitSettingsFileName):
             if reset_settings:
                 if os.path.isfile(fitSettingsFileName):
@@ -121,7 +134,7 @@ class GeometryFitterModel(object):
         #    print('_loadSettings FitSettings EXCEPTION')
         #    raise()
         # try:
-        displaySettingsFileName = self._getDisplaySettingsFileName()
+        displaySettingsFileName = self.getJsonDisplaySettingsFilename()
         if os.path.isfile(displaySettingsFileName):
             if reset_settings:
                 if os.path.isfile(displaySettingsFileName):
@@ -129,22 +142,36 @@ class GeometryFitterModel(object):
             else:
                 with open(displaySettingsFileName, "r") as f:
                     savedSettings = json.loads(f.read())
-                    self._settings.update(savedSettings)
+                    id = savedSettings.get('id')
+                    if id is not None:
+                        assert id == self.GEOMETRY_FITTER_DISPLAY_SETTINGS_ID
+                        assert savedSettings['version'] == '1.0.0'  # future: migrate if version changes
+                        # these are not stored:
+                        del savedSettings['id']
+                        del savedSettings['version']
+                    # migrate to tristate:
+                    displayNodeDerivatives = savedSettings.get('displayNodeDerivatives')
+                    if isinstance(displayNodeDerivatives, bool):
+                        savedSettings['displayNodeDerivatives'] = 2 if displayNodeDerivatives else 0
+                    self._displaySettings.update(savedSettings)
         # except:
         #    print('_loadSettings DisplaySettings EXCEPTION')
         #    pass
 
     def _saveSettings(self):
-        with open(self._getFitSettingsFileName(), "w") as f:
+        with open(self.getJsonSettingsFilename(), "w") as f:
             f.write(self._fitter.encodeSettingsJSON())
-        with open(self._getDisplaySettingsFileName(), "w") as f:
-            f.write(json.dumps(self._settings, sort_keys=False, indent=4))
+        with open(self.getJsonDisplaySettingsFilename(), "w") as f:
+            f.write(json.dumps(self._getOutputDisplaySettings(), sort_keys=False, indent=4))
 
     def getOutputModelFileNameStem(self):
         return self._location
 
     def getOutputModelFileName(self):
         return self._location + ".exf"
+
+    def load(self):
+        self._fitter.load()
 
     def done(self):
         self._saveSettings()
@@ -170,27 +197,30 @@ class GeometryFitterModel(object):
         return self._fitter.getRegion().getScene()
 
     def _getVisibility(self, graphicsName):
-        return self._settings[graphicsName]
+        return self._displaySettings[graphicsName]
 
     def _setVisibility(self, graphicsName, show):
-        self._settings[graphicsName] = show
+        self._displaySettings[graphicsName] = show
         graphics = self.getScene().findGraphicsByName(graphicsName)
         if graphics.isValid():
             graphics.setVisibilityFlag(show)
 
-    def _setMultipleGraphicsVisibility(self, graphicsName, show):
-        '''
-        Ensure visibility of all graphics with graphicsName is set to boolean show.
-        '''
-        self._settings[graphicsName] = show
+    def _setMultipleGraphicsVisibility(self, graphicsPartName, show, selectMode=None):
+        """
+        Ensure visibility of all graphics starting with graphicsPartName is set to boolean show.
+        :param graphicsPartName: Part of the graphics name to match.
+        :param show: Boolean to set visibility.
+        :param selectMode: Optional selectMode to set at the same time.
+        """
         scene = self.getScene()
-        graphics = scene.findGraphicsByName(graphicsName)
+        graphics = scene.getFirstGraphics()
         while graphics.isValid():
-            graphics.setVisibilityFlag(show)
-            while True:
-                graphics = scene.getNextGraphics(graphics)
-                if (not graphics.isValid()) or (graphics.getName() == graphicsName):
-                    break
+            graphicsName = graphics.getName()
+            if graphicsPartName in graphicsName:
+                graphics.setVisibilityFlag(show)
+                if selectMode:
+                    graphics.setSelectMode(selectMode)
+            graphics = scene.getNextGraphics(graphics)
 
     def isDisplayAxes(self):
         return self._getVisibility("displayAxes")
@@ -211,47 +241,62 @@ class GeometryFitterModel(object):
         self._setVisibility("displayLines", show)
 
     def isDisplayLinesExterior(self):
-        return self._settings["displayLinesExterior"]
+        return self._displaySettings["displayLinesExterior"]
 
     def setDisplayLinesExterior(self, isExterior):
-        self._settings["displayLinesExterior"] = isExterior
+        self._displaySettings["displayLinesExterior"] = isExterior
         lines = self.getScene().findGraphicsByName("displayLines")
         lines.setExterior(self.isDisplayLinesExterior())
 
-    def isDisplayNodeDerivatives(self):
-        return self._getVisibility("displayNodeDerivatives")
+    def getDisplayNodeDerivatives(self):
+        """
+        :return: tri-state: 0=show none, 1=show selected, 2=show all
+        """
+        return self._displaySettings['displayNodeDerivatives']
 
-    def setDisplayNodeDerivatives(self, show):
-        self._settings["displayNodeDerivatives"] = show
-        scene = self.getScene()
-        for nodeDerivativeLabel in nodeDerivativeLabels:
-            graphics = scene.findGraphicsByName("displayNodeDerivatives" + nodeDerivativeLabel)
-            graphics.setVisibilityFlag(show and self.isDisplayNodeDerivativeLabels(nodeDerivativeLabel))
+    def setDisplayNodeDerivatives(self, triState):
+        """
+        :param triState: From Qt::CheckState: 0=show none, 1=show selected, 2=show all
+        """
+        self._displaySettings['displayNodeDerivatives'] = triState
+        with ChangeManager(self.getScene()):
+            for nodeDerivativeLabel in self._nodeDerivativeLabels:
+                graphicsPartName = 'displayNodeDerivatives_' + nodeDerivativeLabel
+                self._setMultipleGraphicsVisibility(
+                    graphicsPartName,
+                    bool(triState) and self.isDisplayNodeDerivativeLabels(nodeDerivativeLabel),
+                    selectMode=Graphics.SELECT_MODE_DRAW_SELECTED if (triState == 1) else Graphics.SELECT_MODE_ON)
+
 
     def isDisplayNodeDerivativeLabels(self, nodeDerivativeLabel):
         """
-        :param nodeDerivativeLabel: Label from nodeDerivativeLabels ("D1", "D2" ...)
+        :param nodeDerivativeLabel: Label from self._nodeDerivativeLabels ("D1", "D2" ...)
         """
-        return nodeDerivativeLabel in self._settings["displayNodeDerivativeLabels"]
+        return nodeDerivativeLabel in self._displaySettings["displayNodeDerivativeLabels"]
 
     def setDisplayNodeDerivativeLabels(self, nodeDerivativeLabel, show):
         """
-        :param nodeDerivativeLabel: Label from nodeDerivativeLabels ("D1", "D2" ...)
+        :param nodeDerivativeLabel: Label from self._nodeDerivativeLabels ("D1", "D2" ...)
         """
-        shown = nodeDerivativeLabel in self._settings["displayNodeDerivativeLabels"]
+        shown = nodeDerivativeLabel in self._displaySettings["displayNodeDerivativeLabels"]
         if show:
             if not shown:
-                # keep in same order as nodeDerivativeLabels
+                # keep in same order as self._nodeDerivativeLabels
                 nodeDerivativeLabels = []
-                for label in nodeDerivativeLabels:
+                for label in self._nodeDerivativeLabels:
                     if (label == nodeDerivativeLabel) or self.isDisplayNodeDerivativeLabels(label):
                         nodeDerivativeLabels.append(label)
-                self._settings["displayNodeDerivativeLabels"] = nodeDerivativeLabels
+                self._displaySettings["displayNodeDerivativeLabels"] = nodeDerivativeLabels
         else:
             if shown:
-                self._settings["displayNodeDerivativeLabels"].remove(nodeDerivativeLabel)
-        graphics = self.getScene().findGraphicsByName("displayNodeDerivatives" + nodeDerivativeLabel)
-        graphics.setVisibilityFlag(show and self.isDisplayNodeDerivatives())
+                self._displaySettings["displayNodeDerivativeLabels"].remove(nodeDerivativeLabel)
+        # workaround for setting multiple visibility of d1/d2 applied to any derivatives starting with same text!
+        with ChangeManager(self.getScene()):
+            for tmpNodeDerivativeLabel in self._nodeDerivativeLabels:
+                if nodeDerivativeLabel in tmpNodeDerivativeLabel:
+                    graphicsPartName = 'displayNodeDerivatives_' + tmpNodeDerivativeLabel
+                    show = tmpNodeDerivativeLabel in self._displaySettings['displayNodeDerivativeLabels']
+                    self._setMultipleGraphicsVisibility(graphicsPartName, show and bool(self.getDisplayNodeDerivatives()))
 
     def isDisplayMarkerDataPoints(self):
         return self._getVisibility("displayMarkerDataPoints")
@@ -293,13 +338,19 @@ class GeometryFitterModel(object):
         return self._getVisibility("displayDataProjections")
 
     def setDisplayDataProjections(self, show):
-        self._setMultipleGraphicsVisibility("displayDataProjections", show)
+        self._setVisibility("displayDataProjections", show)
 
     def isDisplayDataProjectionPoints(self):
         return self._getVisibility("displayDataProjectionPoints")
 
     def setDisplayDataProjectionPoints(self, show):
-        self._setMultipleGraphicsVisibility("displayDataProjectionPoints", show)
+        self._setVisibility("displayDataProjectionPoints", show)
+
+    def isDisplayDataProjectionTangents(self):
+        return self._getVisibility("displayDataProjectionTangents")
+
+    def setDisplayDataProjectionTangents(self, show):
+        self._setVisibility("displayDataProjectionTangents", show)
 
     def isDisplayNodeNumbers(self):
         return self._getVisibility("displayNodeNumbers")
@@ -320,27 +371,27 @@ class GeometryFitterModel(object):
         self._setVisibility("displaySurfaces", show)
 
     def isDisplaySurfacesExterior(self):
-        return self._settings["displaySurfacesExterior"]
+        return self._displaySettings["displaySurfacesExterior"]
 
     def setDisplaySurfacesExterior(self, isExterior):
-        self._settings["displaySurfacesExterior"] = isExterior
+        self._displaySettings["displaySurfacesExterior"] = isExterior
         surfaces = self.getScene().findGraphicsByName("displaySurfaces")
         surfaces.setExterior(self.isDisplaySurfacesExterior() if (self._fitter.getHighestDimensionMesh().getDimension() == 3) else False)
 
     def isDisplaySurfacesTranslucent(self):
-        return self._settings["displaySurfacesTranslucent"]
+        return self._displaySettings["displaySurfacesTranslucent"]
 
     def setDisplaySurfacesTranslucent(self, isTranslucent):
-        self._settings["displaySurfacesTranslucent"] = isTranslucent
+        self._displaySettings["displaySurfacesTranslucent"] = isTranslucent
         surfaces = self.getScene().findGraphicsByName("displaySurfaces")
         surfacesMaterial = self._materialmodule.findMaterialByName("trans_blue" if isTranslucent else "solid_blue")
         surfaces.setMaterial(surfacesMaterial)
 
     def isDisplaySurfacesWireframe(self):
-        return self._settings["displaySurfacesWireframe"]
+        return self._displaySettings["displaySurfacesWireframe"]
 
     def setDisplaySurfacesWireframe(self, isWireframe):
-        self._settings["displaySurfacesWireframe"] = isWireframe
+        self._displaySettings["displaySurfacesWireframe"] = isWireframe
         surfaces = self.getScene().findGraphicsByName("displaySurfaces")
         surfaces.setRenderPolygonMode(Graphics.RENDER_POLYGON_MODE_WIREFRAME if isWireframe else Graphics.RENDER_POLYGON_MODE_SHADED)
 
@@ -415,10 +466,6 @@ class GeometryFitterModel(object):
 
         # prepare fields and calculate axis and glyph scaling
         with ChangeManager(fieldmodule):
-            # fields in same order as nodeDerivativeLabels
-            nodeDerivativeFields = [fieldmodule.createFieldNodeValue(modelCoordinates, derivative, 1) for derivative in [
-                Node.VALUE_LABEL_D_DS1, Node.VALUE_LABEL_D_DS2, Node.VALUE_LABEL_D_DS3,
-                Node.VALUE_LABEL_D2_DS1DS2, Node.VALUE_LABEL_D2_DS1DS3, Node.VALUE_LABEL_D2_DS2DS3, Node.VALUE_LABEL_D3_DS1DS2DS3]]
             elementDerivativesField = fieldmodule.createFieldConcatenate(
                 [fieldmodule.createFieldDerivative(modelCoordinates, d + 1) for d in range(meshDimension)])
             cmiss_number = fieldmodule.findFieldByName("cmiss_number")
@@ -624,18 +671,26 @@ class GeometryFitterModel(object):
                 if dataProjectionCoordinates:
                     dataProjectionPoints.setCoordinateField(dataProjectionCoordinates)
                 pointattr = dataProjectionPoints.getGraphicspointattributes()
-                if True:
-                    # visualize local projection tangent 1
-                    pointattr.setGlyphShapeType(Glyph.SHAPE_TYPE_LINE)
-                    pointattr.setOrientationScaleField(self._fitter.getDataProjectionOrientationField())
-                    pointattr.setBaseSize([glyphWidthSmall, glyphWidthSmall, glyphWidthSmall])
-                    pointattr.setScaleFactors([0.0, 0.0, 0.0])
-                # else:
-                #     pointattr.setGlyphShapeType(Glyph.SHAPE_TYPE_POINT)
-                #     dataProjectionPoints.setRenderPointSize(3.0)
+                pointattr.setGlyphShapeType(Glyph.SHAPE_TYPE_POINT)
+                dataProjectionPoints.setRenderPointSize(3.0)
                 dataProjectionPoints.setMaterial(self._materialmodule.findMaterialByName("grey50"))
                 dataProjectionPoints.setName("displayDataProjectionPoints")
                 dataProjectionPoints.setVisibilityFlag(self.isDisplayDataProjectionPoints())
+
+                dataProjectionTangents = scene.createGraphicsPoints()
+                dataProjectionTangents.setFieldDomainType(Field.DOMAIN_TYPE_DATAPOINTS)
+                dataProjectionTangents.setSubgroupField(dataProjectionNodeGroup)
+                if dataProjectionCoordinates:
+                    dataProjectionTangents.setCoordinateField(dataProjectionCoordinates)
+                pointattr = dataProjectionTangents.getGraphicspointattributes()
+                # visualize local projection tangent 1
+                pointattr.setGlyphShapeType(Glyph.SHAPE_TYPE_LINE)
+                pointattr.setOrientationScaleField(self._fitter.getDataProjectionOrientationField())
+                pointattr.setBaseSize([glyphWidthSmall, glyphWidthSmall, glyphWidthSmall])
+                pointattr.setScaleFactors([0.0, 0.0, 0.0])
+                dataProjectionTangents.setMaterial(self._materialmodule.findMaterialByName("grey50"))
+                dataProjectionTangents.setName("displayDataProjectionTangents")
+                dataProjectionTangents.setVisibilityFlag(self.isDisplayDataProjectionTangents())
 
             nodePoints = scene.createGraphicsPoints()
             nodePoints.setFieldDomainType(Field.DOMAIN_TYPE_NODES)
@@ -657,24 +712,10 @@ class GeometryFitterModel(object):
             nodeNumbers.setName("displayNodeNumbers")
             nodeNumbers.setVisibilityFlag(self.isDisplayNodeNumbers())
 
-            # names in same order as nodeDerivativeLabels "D1", "D2", "D3", "D12", "D13", "D23", "D123" and nodeDerivativeFields
-            nodeDerivativeMaterialNames = ["gold", "silver", "green", "cyan", "magenta", "yellow", "blue"]
-            derivativeScales = [1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 0.25]
-            for i in range(len(nodeDerivativeLabels)):
-                nodeDerivativeLabel = nodeDerivativeLabels[i]
-                nodeDerivatives = scene.createGraphicsPoints()
-                nodeDerivatives.setFieldDomainType(Field.DOMAIN_TYPE_NODES)
-                nodeDerivatives.setCoordinateField(modelCoordinates)
-                pointattr = nodeDerivatives.getGraphicspointattributes()
-                pointattr.setGlyphShapeType(Glyph.SHAPE_TYPE_ARROW_SOLID)
-                pointattr.setOrientationScaleField(nodeDerivativeFields[i])
-                pointattr.setBaseSize([0.0, glyphWidth, glyphWidth])
-                pointattr.setScaleFactors([derivativeScales[i], 0.0, 0.0])
-                material = self._materialmodule.findMaterialByName(nodeDerivativeMaterialNames[i])
-                nodeDerivatives.setMaterial(material)
-                nodeDerivatives.setSelectedMaterial(material)
-                nodeDerivatives.setName("displayNodeDerivatives" + nodeDerivativeLabel)
-                nodeDerivatives.setVisibilityFlag(self.isDisplayNodeDerivatives() and self.isDisplayNodeDerivativeLabels(nodeDerivativeLabel))
+            nodeDerivativeFields = determine_node_field_derivatives(self.getRegion(), modelCoordinates)
+            scene_create_node_derivative_graphics(
+                scene, modelCoordinates, nodeDerivativeFields, glyphWidth, self._nodeDerivativeLabels,
+                self.getDisplayNodeDerivatives(), self._displaySettings['displayNodeDerivativeLabels'])
 
             elementNumbers = scene.createGraphicsPoints()
             elementNumbers.setFieldDomainType(Field.DOMAIN_TYPE_MESH_HIGHEST_DIMENSION)
@@ -739,13 +780,13 @@ class GeometryFitterModel(object):
         """
         :return: Field or None.
         """
-        displayGroupFieldName = self._settings["displaySubgroupFieldName"]
+        displayGroupFieldName = self._displaySettings["displaySubgroupFieldName"]
         displayGroupField = None
         if displayGroupFieldName:
             displayGroupField = self._fitter.getFieldmodule().findFieldByName(displayGroupFieldName)
             if not displayGroupField.isValid():
                 displayGroupField = None
-                self._settings["displaySubgroupFieldName"] = None
+                self._displaySettings["displaySubgroupFieldName"] = None
         return displayGroupField
 
     def setGraphicsDisplaySubgroupField(self, subgroupField: Field):
@@ -753,7 +794,7 @@ class GeometryFitterModel(object):
         Set graphics to only show a particular group, or all.
         :param subgroupField: Subgroup field to set or None for none.
         """
-        self._settings["displaySubgroupFieldName"] = subgroupField.getName() if subgroupField else None
+        self._displaySettings["displaySubgroupFieldName"] = subgroupField.getName() if subgroupField else None
         self._updateGraphicsDisplaySubgroupField(subgroupField)
 
     def _updateGraphicsDisplaySubgroupField(self, subgroupField: Field):
@@ -837,6 +878,7 @@ class GeometryFitterModel(object):
             "displayMarkerDataNames",
             "displayMarkerDataProjections",
             "displayDataProjectionPoints",
+            "displayDataProjectionTangents",
             "displayDataProjections",
             "displayAxes",
         ]
