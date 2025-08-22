@@ -28,13 +28,13 @@ class GeometryFitterModel(object):
     Geometric fit model adding visualisations to github.com/ABI-Software/scaffoldfitter
     """
 
-    def __init__(self, inputZincModelFile, inputZincDataFile, location, identifier, reset_settings):
+    def __init__(self, input_zinc_model_file, input_zinc_data_file, location, identifier, reset_settings):
         """
         :param location: Path to folder for mapclient step name.
         """
         self._manualAlignTempInvisible = None
         self._initial_matrix = []
-        self._fitter = Fitter(inputZincModelFile, inputZincDataFile)
+        self._fitter = Fitter(input_zinc_model_file, input_zinc_data_file)
         # self._fitter.setDiagnosticLevel(1)
         self._location = os.path.join(location, identifier)
         self._identifier = identifier
@@ -67,7 +67,6 @@ class GeometryFitterModel(object):
             "displaySubgroupFieldName":  None
         }
         self._loadSettings(reset_settings)
-        self._fitter.load()
         self._isStateAlign = False
         self._alignStep = None
         self._modelTransformedCoordinateField = None
@@ -152,7 +151,7 @@ class GeometryFitterModel(object):
                         del savedSettings['version']
                     # migrate to tristate:
                     displayNodeDerivatives = savedSettings.get('displayNodeDerivatives')
-                    if displayNodeDerivatives == True:
+                    if displayNodeDerivatives is not None and displayNodeDerivatives:
                         savedSettings['displayNodeDerivatives'] = 2  # show all
                     self._displaySettings.update(savedSettings)
         # except:
@@ -170,6 +169,9 @@ class GeometryFitterModel(object):
 
     def getOutputModelFileName(self):
         return self._location + ".exf"
+
+    def load(self):
+        self._fitter.load()
 
     def done(self):
         self._saveSettings()
@@ -206,6 +208,8 @@ class GeometryFitterModel(object):
     def _setMultipleGraphicsVisibility(self, graphicsPartName, show, selectMode=None):
         """
         Ensure visibility of all graphics starting with graphicsPartName is set to boolean show.
+        :param graphicsPartName: Part of the graphics name to match.
+        :param show: Boolean to set visibility.
         :param selectMode: Optional selectMode to set at the same time.
         """
         scene = self.getScene()

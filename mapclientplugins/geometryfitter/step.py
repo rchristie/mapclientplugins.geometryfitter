@@ -76,6 +76,7 @@ class GeometryFitterStep(WorkflowStepMountPoint):
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.WaitCursor)
         try:
             self._create_model()
+            self._model.load()
             self._config['reset'] = False
             if self._config['auto-fit']:
                 self._model.done()
