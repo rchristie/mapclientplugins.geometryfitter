@@ -142,9 +142,9 @@ class GeometryFitterModel(object):
             else:
                 with open(displaySettingsFileName, "r") as f:
                     savedSettings = json.loads(f.read())
-                    id = savedSettings.get('id')
-                    if id is not None:
-                        assert id == self.GEOMETRY_FITTER_DISPLAY_SETTINGS_ID
+                    settings_id = savedSettings.get('id')
+                    if settings_id is not None:
+                        assert settings_id == self.GEOMETRY_FITTER_DISPLAY_SETTINGS_ID
                         assert savedSettings['version'] == '1.0.0'  # future: migrate if version changes
                         # these are not stored:
                         del savedSettings['id']
