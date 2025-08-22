@@ -151,8 +151,8 @@ class GeometryFitterModel(object):
                         del savedSettings['version']
                     # migrate to tristate:
                     displayNodeDerivatives = savedSettings.get('displayNodeDerivatives')
-                    if displayNodeDerivatives is not None and displayNodeDerivatives:
-                        savedSettings['displayNodeDerivatives'] = 2  # show all
+                    if isinstance(displayNodeDerivatives, bool):
+                        savedSettings['displayNodeDerivatives'] = 2 if displayNodeDerivatives else 0
                     self._displaySettings.update(savedSettings)
         # except:
         #    print('_loadSettings DisplaySettings EXCEPTION')
